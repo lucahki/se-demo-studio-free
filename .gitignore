@@ -1,5 +1,11 @@
 .env
 toolkit/node_modules/
+# local voice and transcription tools and models, installed by scripts/setup.sh
+toolkit/.venv/
+toolkit/.uv/
+toolkit/.uv-cache/
+toolkit/.python/
+toolkit/models/
 /jobs/
 .DS_Store
 .claude/settings.local.json

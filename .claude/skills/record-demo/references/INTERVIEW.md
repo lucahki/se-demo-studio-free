@@ -20,8 +20,8 @@ for a yes.
    (ask for the demo name or link), a partner or Cisco lab, their own sandbox with fictional data, or a public
    site. Customer environments are not allowed: if the answer is a customer's tenant or production system, say
    so plainly and help them pick a demo environment instead. Also tell them, before the job is created, what
-   leaves their Mac: Claude sees the product screens and page text, and OpenRouter models receive the script
-   text, the narration audio, and review frames and stills of the recorded product.
+   leaves their Mac: Claude sees the product screens, page text, and the job's files. The voice and word timing
+   run on their Mac, so the narration audio goes nowhere else.
    If it is their own environment (a sandbox or lab they built), create the job right away and do your
    reconnaissance in the job's Chrome (SKILL.md Steps 2 and 3), so they sign in once and the facts you check land
    in INTERVIEW.md.
@@ -61,9 +61,10 @@ for a yes.
 10. **Branding and distribution.** Internal draft (default), or intended for customers. Remind them that nothing
     here is brand, legal, or SME reviewed, and that customer-facing use is their decision after review.
 11. **Voice.** Default "a calm, assured, technical demo voice, not a marketing voice". Any preference on gender,
-    accent, or pace. Product names that are often mispronounced.
-12. **Budget and time.** OpenRouter spend cap for the job (default $15; the 5-minute Cloud Control demo spent
-    $2.66) and the time limit (default 4 hours). When they need it by.
+    accent, or pace. Product names that are often mispronounced. They pick the actual voice by ear in a short
+    audition before the build (SKILL.md Step 4).
+12. **Time and music.** The time limit (default 4 hours) and when they need it by. Music: none by default; if
+    they want some, they supply a track they have the rights to.
 
 ## Round 4: sources (only if not obvious)
 
@@ -87,11 +88,6 @@ Ask this round right after round 2 when the environment is their own or the stor
     a device), with the exact steps and when to do each, and what the demo must do in reply (answer, open,
     accept). The waiting is cut from the video; the screen shows something useful while it happens. The rehearsal
     comes first, so the reply is tested on the real event before they are cued for a recorded take.
-    When the live action is a phone call into a product that works by conversation (for example a Contact Center
-    AI Agent with no keypad menu), offer the AI caller instead (references/AI_CALLER.md): ChatGPT voice mode
-    places and holds the call with no human on the line. Say that OpenAI then hears the whole call, and that it
-    needs a one-time setup of about 10 minutes (audio cables, Claude in Chrome, Webex audio settings, a test call
-    to their own phone).
 16. **Time windows.** Schedules that limit when live takes can run (business hours, maintenance windows, a demo
     reservation ending), with the time zone. Everything else can run any time.
 17. **Off-screen events.** Anything the screen recording cannot capture (phone audio, another device, an email

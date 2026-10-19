@@ -28,7 +28,7 @@ conversational, specific; never an announcer, never hype}}.
 
 {{BULLETED LIST: every interview answer that changes a default below, quoted where the owner gave words.
 For example: persona, how far the demo may act, each allowed state change with its reset rule, redaction,
-content to keep off screen, branding, budget, deadline, story constraints.}}
+content to keep off screen, branding, voice, music, deadline, story constraints.}}
 
 ## Read first
 
@@ -68,8 +68,8 @@ note. It sets positioning; it does not authorize a technical claim the sources d
   recorded in {{ENVIRONMENT, e.g. a Cisco dCloud demo environment}} with fictional data. The SE is {{PERSONA,
   default: unnamed, with no face, avatar, photo, or name}}. If the owner performs live actions, do not call all
   the data fictional: say the company, its customers, and the story data are fictional (L59).
-- **Sound.** Music only under the title and the close. Sound effects only for the recorded clicks and
-  keystrokes, kept subtle.
+- **Sound.** No music unless the owner supplied a track (job.json `music`); then only under the title and the
+  close. Sound effects only for the recorded clicks and keystrokes, kept subtle.
 
 ## Understand before you film
 
@@ -103,7 +103,7 @@ note. It sets positioning; it does not authorize a technical claim the sources d
    identifiers that will be visible with a proposed blur for each (L58), and open questions. Then print a message that starts with "STORYBOARD READY:" and **stop
    and wait**. Do not record final takes until `ORCHESTRATOR_NOTES.md` contains an entry that says
    "STORYBOARD APPROVED" (possibly with changes you must apply). Check the notes file every few minutes while
-   you wait, and keep doing non-recording work (voice auditions, music beds, sources) in the meantime.
+   you wait, and keep doing non-recording work (voice takes, sources) in the meantime.
 6. Rehearse the full click path once without recording (find coordinates with `capture/tab.js`), then record.
    Rehearse any owner action once with the owner too (L39). Record beats in story order: opening an item can
    auto-run an analysis, post notifications, or show up in another view, so a later take may not find the state
@@ -207,11 +207,6 @@ close, and transitions, and none of it may imitate a product screen.
   rehearsal and arm ONE responder whose locator matched the real event; say "responder armed" in the marker line,
   and print the marker only once it is. It responds within a few seconds, checks the response took, and if it
   cannot, prints "OWNER ACTION NEEDED:" again at once with what the owner should do now (L48).}}
-{{OPTIONAL, only when an AI caller places the calls (references/AI_CALLER.md):
-- AI caller: ChatGPT voice mode places each call through `node capture/caller.js` and Claude in Chrome, with
-  persona file {{script/caller_persona_<name>.txt}} and number {{NUMBER}}. Follow the run order in
-  `.claude/skills/record-demo/references/AI_CALLER.md` exactly. Do not dial unless `caller.js loopback` printed
-  PASS in the same session. Keep `audio/calls/<name>_{agent,caller}.wav` and the transcript for the edit.}}
 - Allowed: {{ALLOWED ACTIONS FROM THE INTERVIEW. Default "look and ask": navigating, filtering, searching, reading
   existing threads, asking the AI assistant questions, opening investigations. "Full control" adds creating and
   running investigations, assigning and resolving items, sharing within the demo, generating summaries, and
@@ -246,21 +241,23 @@ and `engine.js` rarely need changes.
 
 - Write the final talk track from the recorded takes, after recording: live AI answers change run to run, so the
   storyboard's lines are a draft (L4).
-- Voice: the SE should sound like a person talking over a screen share, not a narrator reading copy. Audition
-  voices on a short paragraph first (`lib/take.py ... --dir audio/audition --text <file>`), then record several
-  full takes of the talk track across the best two or three. Have an audio-capable model score them for
-  naturalness, conversational register, and warmth (`lib/chat.py`), and check every take's wording with
-  `lib/stt.py` and `lib/check_take.py`. Whisper mishears some words; before rewording a line that
-  `check_take.py` flags, confirm with a short listen (`lib/chat.py openai/gpt-audio`) (L24). Start from the demo
-  voice in `.claude/skills/record-demo/references/MODELS.md` (L22); the catalog changes often.
+- Voice: the SE should sound like a person talking over a screen share, not a narrator reading copy. The owner
+  chose the voice by ear before launch: {{VOICE FROM THE AUDITION, e.g. Kokoro am_michael at speed 1.0}}, saved
+  in job.json "voice". Record with `lib/take.py` (Kokoro on this Mac, free) and check every take's wording with
+  `lib/stt.py` and `lib/check_take.py`. The same text and settings give an identical take, so to change a read,
+  change the words, punctuation, or speed (Kokoro reads punctuation as pauses). You cannot hear audio: list
+  every line you are unsure of (product names, acronyms, numbers, anything `check_take.py` flags, since Whisper
+  mishears some words, L24) in `review/LISTEN.md` with its time in `audio/voice.wav`, for the owner to play at
+  the rough cut. Never use an `--engine say` take in the video (Apple licenses those voices for personal,
+  non-commercial use).
 - Pronunciation lives in the speech text (L23): {{RESPELLINGS FOR THIS PRODUCT}}. Put the same pairs in job.json
-  "respell" so captions show the written form. Listen-check every product name in the winning take. If a voice
+  "respell" so captions show the written form. Put every product name in `review/LISTEN.md`. If a voice
   keeps saying a word wrong, reword the line (L23).
-- Test whether a model's style field actually changes the read before relying on it. Never put directions in the
-  spoken text, and confirm no take reads a direction aloud.
+- Never put directions in the spoken text (Kokoro has no style field and reads everything aloud); confirm with
+  `check_take.py` that no take reads one.
 - Assemble with `lib/build_voice.py`; cut only at paragraph gaps (L25). Drive every cut, push-in, and chapter
   change from the resulting word timestamps, and make sure what the SE says matches what is on screen then (L5).
-- Music: two or three beds, judged by a model (L26), under the title and close only. Master to -16 LUFS
+- Music: none unless the owner supplied a track; if so, under the title and close only. Master to -16 LUFS
   (`lib/mix.py`). Export captions with `lib/deliver.py`; do not burn them in.
 
 ## Pacing
@@ -272,8 +269,10 @@ spend more than {{HOURS}} hours in total.
 ## Review
 
 Build a review package in `review/`: contact sheets per chapter, key frames at full size, the timed transcript,
-the claim list, the state-change log, and the mix. Send it to a model different from the one that wrote the
-script, and a different one again for round 2 (see references/MODELS.md). Ask each reviewer: does this feel like a
+the claim list, the state-change log, the mix, and `review/LISTEN.md`. Review it in two rounds, both by Claude
+reading the images directly, with no outside models: round 1, read every contact sheet and key frame yourself;
+round 2, give a fresh general-purpose subagent only the review package and these questions, without the
+script-writing history, so it looks with fresh eyes. Ask each round: does this feel like a
 real SE running a real demo (pace, naturalness, words matching the screen, could a customer follow it), and is
 every claim supported? Also check timing drift, legibility, visual consistency, and redaction misses. In addition,
 run the `claim-checker` agent over the final talk track and on-screen text against the sources. Verify each
@@ -287,23 +286,21 @@ Deliver in this folder:
   exact clicks and typed questions, the talk track, every on-screen text, the source for each claim, and
   live-run notes (what can differ on the day). Plus `script/speech.txt`, the exact text sent to the voice model;
 - `research/DEMO_MAP.md`, `research/STORYBOARD.md`, `research/CLAIMS.md`;
-- a README with: how it was made; every model call with cost and a running total (from `logs/costs.jsonl`); the
+- a README with: how it was made; the voice, speed, and takes used (from `audio/takes/*.log`); the
   claim table; public image sources; the redaction log; the state-change log; review dispositions; the evidence
   boundary (what was and was not checked, and that no human listen or SME, brand, or legal review has
   happened); open owner decisions; what you would fix with more time; the "Deliberately not said" list; and disk
   usage of raw captures and intermediates, with what can be deleted.
 Print "FINAL READY:" with the video and player paths when done.
 
-## Budget
+## Cost
 
-Hard cap of ${{BUDGET}} of OpenRouter spend for this job, set as `budget_usd` in job.json. Every toolkit script
-logs the billed cost of each call to `logs/costs.jsonl` and refuses to run once the cap is reached; check with
-`python3 lib/spend.py` before each batch of paid calls. If you need more, print "OWNER DECISION NEEDED:" and ask.
-Never raise the cap yourself. The key lives in the studio `.env`; never print, echo, read, or log it.
+Nothing in this job spends money. The voice and Whisper run on this Mac. Never call OpenRouter, OpenAI, or any
+other paid or remote AI service, and never add a key. Never read `.env`.
 
 ## Tools
 
-Use the toolkit and the models on OpenRouter. If you need to install anything else, stop and print a message that
+Use the toolkit and its local models. If you need to install anything else, stop and print a message that
 starts with "TOOL REQUEST:": name the tool, why, where it comes from, and roughly how large it is. Wait for the
 go-ahead.
 

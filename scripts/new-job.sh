@@ -19,7 +19,7 @@ cp -R toolkit/job-template "$DIR"
 python3 - "$DIR/job.json" "$SLUG" "$PORT" <<'PY'
 import json,sys; f,slug,port=sys.argv[1:4]; d=json.load(open(f)); d['slug']=slug; d['chrome_port']=int(port); json.dump(d,open(f,'w'),indent=2)
 PY
-: > "$DIR/logs/costs.jsonl"; : > "$DIR/ORCHESTRATOR_NOTES.md"
+: > "$DIR/ORCHESTRATOR_NOTES.md"
 printf '# State changes made in the demo environment\n\n| When | What | Where | Why |\n|---|---|---|---|\n' > "$DIR/logs/state_changes.md"
 if [ $TEST = 1 ]; then
   T=.claude/skills/record-demo/test-run; cp -R "$T/job/." "$DIR/"

@@ -4,18 +4,15 @@ Claude: every Claude Code session and subagent in this studio runs `claude-opus-
 `.claude/settings.json`, the skill, and every agent file). Launch NodeTerm sessions with the exact id
 `--model claude-opus-5-5`, never the `opus` alias, which resolved to an older Opus on 2026-09-23.
 
-OpenRouter models that worked in September 2026. The catalog changes often: list the current ones from inside a
-job folder with `python3 lib/models.py speech|transcription|audio|image|text [filter]` before choosing.
+Everything else runs on this Mac and costs nothing (free, local mode; installed by `scripts/setup.sh`).
 
-| Job | Model | Notes |
+| Job | Tool | Notes |
 |---|---|---|
-| Demo voice | `google/gemini-3.8-flash-tts`, voice `Iapetus` | Won for "calm, assured, technical demo voice". Also `Charon` (better for ads). One call holds a 5-minute script, about $0.08. No working style field. |
-| Alternative voices | `minimax/speech-2.8-hd` (`English_magnetic_voiced_man`), `microsoft/mai-voice-2` | MAI has a working style field; MAI Harper said "won" for WAN. |
-| Voice for test runs | The demo voice above | The test run used it on 2026-10-19: about 1 cent per 50-second take. The free `deepgram/flux-tts:free` was gone from the catalog that day; the only free voice listed was `fish-audio/s2.1-pro-free:free`, not tested here. |
-| Word timestamps | `openai/whisper-large-v3` | Mishears some words; confirm by ear before rewording. |
-| Listening judge | `openai/gpt-audio` | Scores takes, checks pronunciation and missing words. Judge joins by `build_voice.py`'s JOIN numbers instead (L56). |
-| Music | `google/lyria-3-pro-preview` | Make 2 or 3 beds; one had garbled vocals. |
-| Frame and fact review | `google/gemini-3.1-pro-preview`, then a second model family (e.g. `openai/gpt-6-sol`, used for the Cloud Control fact check) | Use different models from the script writer and from each other. |
-| Connective art | `google/gemini-3-pro-image`, `openai/gpt-image-2` | Title backgrounds only; never imitate product UI. |
-
-If a model returns "no endpoints found" or a data-policy error, see SETUP.md, "Model access".
+| Demo voice | Kokoro v1.0 through kokoro-onnx (`lib/take.py`) | The owner picks the voice by ear with `lib/audition.py` before the build. Default `am_michael`. No style field; only speed (0.9 to 1.1 sounds natural). Same text and settings give an identical take. About 4 times faster than real time on an M-series Mac. |
+| Voice grades | from the Kokoro voice list | American women: `af_heart` A, `af_bella` A-, `af_nicole` B-. American men: `am_michael`, `am_fenrir`, `am_puck` C+. British: `bf_emma` B-, `bm_george` and `bm_fable` C. `python3 lib/audition.py --list` shows all. |
+| Word timestamps | Whisper large-v3-turbo through mlx-whisper (`lib/stt.py`) | Mishears some words (it wrote "SD-WAN" as "SDWAN", which the alignment accepts); list doubtful lines for the owner's listen before rewording. |
+| Listening | the owner | Claude cannot hear audio. Wording is checked against Whisper's text by `check_take.py`; pronunciation and artifacts are checked by the owner from `review/LISTEN.md`. Joins are judged by `build_voice.py`'s JOIN numbers (L56). |
+| Music | none, or the owner's own track | No music generator. A track the owner has the rights to goes in `audio/music/` and job.json `music`. |
+| Frame and fact review | Claude | Round 1 by the builder, round 2 by a fresh subagent that has not seen the script being written, plus the `claim-checker` agent. |
+| Connective art | none | Title cards and backgrounds are built in HTML and CSS in `build/story.js`; never imitate product UI. |
+| Draft voice only | macOS `say` (`lib/take.py ... --engine say`) | Apple licenses these voices for personal, non-commercial use, so never in a shared video. |

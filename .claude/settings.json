@@ -11,7 +11,7 @@
     ],
     "allow": [
       "Bash(scripts/setup.sh)",
-      "Bash(scripts/check-openrouter.sh)",
+      "Bash(afplay audio/*)",
       "Bash(scripts/new-job.sh *)",
       "Bash(scripts/chrome.sh *)",
       "Bash(scripts/fetch-cisco-source.sh *)",

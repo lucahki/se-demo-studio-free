@@ -1,6 +1,8 @@
 # Final mix: voice (EQ, light compression), music only inside the windows set in job.json, ducked under the voice,
 # and the quiet recorded click/key effects. Mastered to -16 LUFS integrated.
-# job.json "music": {"file": "audio/music/bed1.wav", "level_db": -9, "windows": [["intro","plan"], ["close", null]]}
+# Music is optional and off by default: there is no music generator. To use your own track (one you have the rights
+# to), put it in audio/music/ and set job.json "music": {"file": "audio/music/track.mp3", "level_db": -9,
+# "windows": [["intro","plan"], ["close", null]]}. An empty "file" or no windows means no music.
 #   each window runs from the start of the first segment (or 0 for the first) to the end of the second segment
 #   (null = to the end of the video). The bed restarts at its beginning in each window.
 # usage: python3 lib/mix.py out/mix.wav
@@ -17,6 +19,7 @@ fxw = os.path.join(JOB, 'build', '_fx.wav')
 w = wave.open(fxw, 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
 w.writeframes(array.array('h', [int(max(-1, min(1, v)) * 32767) for v in fx]).tobytes()); w.close()
 M = job_config().get('music') or {}
+if M.get('file') and not os.path.exists(M['file']): sys.exit('job.json music file %s does not exist; fix the path or set "file": "".' % M['file'])
 inputs = ['-i', 'audio/voice.wav', '-i', fxw]
 fc = [f'[0:a]aresample={SR},highpass=f=70,equalizer=f=220:t=q:w=1:g=-1.5,equalizer=f=3200:t=q:w=1.2:g=1.5,'
       f'acompressor=threshold=-21dB:ratio=2.5:attack=5:release=120:makeup=2.5dB,apad=whole_dur={TOT},atrim=0:{TOT},asplit=2[vo][sc]',

@@ -1,0 +1,42 @@
+# Local voice (kokoro-onnx) and word timing (mlx-whisper) for scripts/setup.sh, installed with --no-deps into
+# toolkit/.venv (Python 3.13). Every package is pinned; PyTorch is left out on purpose (mlx-whisper needs it only
+# to convert models). All licenses are permissive except phonemizer (GPL-3.0), which Kokoro uses for pronunciation.
+anyio==4.15.1
+attrs==26.1.0
+certifi==2026.10.18
+charset-normalizer==3.5.2
+click==8.5.0
+cloudpickle==3.1.2
+dlinfo==2.0.0
+espeakng-loader==0.2.4
+filelock==4.2.4
+flatbuffers==25.12.19
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.7.0
+httpcore2==2.15.1
+httpx2==2.15.1
+huggingface-hub==2.2.0
+idna==3.20
+joblib==1.6.0
+kokoro-onnx==0.6.1
+llvmlite==0.50.0
+mlx==0.32.4
+mlx-metal==0.32.4
+mlx-whisper==0.4.3
+more-itertools==11.2.1
+numba==0.68.0
+numpy==2.5.4
+onnxruntime==1.31.0
+packaging==26.3
+phonemizer==3.4.0
+protobuf==7.36.2
+pyyaml==6.0.3
+regex==2026.9.29
+requests==2.34.2
+scipy==1.18.1
+tiktoken==0.14.0
+tqdm==4.70.1
+truststore==0.10.5
+typing-extensions==4.16.0
+urllib3==2.8.0

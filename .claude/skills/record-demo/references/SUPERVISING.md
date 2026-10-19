@@ -28,8 +28,7 @@ runs unattended. The builder's window can still ask to approve an unusual comman
 it now and then, or to answer from the NodeTerm canvas. Nothing is installed without their yes (TOOL REQUEST).
 
 **Without NodeTerm:** ask the person to open a second Terminal window, `cd` to the studio root, run
-`claude --model claude-opus-5-5`, and paste the line from LAUNCH.txt (write it as in step 1). If the job uses the AI caller and
-Claude in Chrome is not enabled by default, run `claude --chrome --model claude-opus-5-5` instead. Record "Terminal
+`claude --model claude-opus-5-5`, and paste the line from LAUNCH.txt (write it as in step 1). Record "Terminal
 window" and the launch time in `jobs/<slug>/SUPERVISOR.md`. Watch `STATUS.md` the same way. To reach
 the builder, append to `ORCHESTRATOR_NOTES.md` and ask the person to type "New entry in ORCHESTRATOR_NOTES.md,
 read it now." into that window. Do not run the builder as a subagent: it could not launch its own explorers or
@@ -50,7 +49,7 @@ The builder appends every marker line to `jobs/<slug>/STATUS.md` with a timestam
 | `FINAL READY:` | Final checks (below), then report. |
 
 Watch with a background loop (Monitor, or `/loop`) that checks every 5 minutes for new lines in `STATUS.md`, a new MP4 in
-`jobs/<slug>/out/`, spend near the cap (`python3 lib/spend.py` in the job folder), or the builder going idle, with a
+`jobs/<slug>/out/`, or the builder going idle, with a
 20 to 25 minute heartbeat. Do not poll faster; it wastes effort and changes nothing. The exception is a take that
 waits for an owner action: a 5-minute check can miss a 5-minute wait. While such takes can run, agree the window
 with the person and watch STATUS.md continuously (a Monitor that tails it), so the line reaches them within
@@ -86,12 +85,14 @@ Ask for approval or changes. Then append `STORYBOARD APPROVED` (with any changes
 - After the rough cut: render a contact sheet (`python3 lib/grid.py` over stills from
   `node build/render.js stills ...`) and read `script/speech.txt` against `research/CLAIMS.md`.
 - Pull full-size frames of any shot with account names, emails, or third-party data if redaction applies.
-- Sum the cost log (`python3 lib/spend.py`).
+- Go through `review/LISTEN.md` with the person: each line with its time in `audio/voice.wav` (they can play it
+  with `afplay` or in QuickTime). You cannot hear audio, so pronunciation and artifacts are their call; pass
+  any rewording back to the builder.
 
 ## Final report to the person
 
-Where the video and player are; the story and what it leaves out; each claim with its source; total spend; how
-long it took; the evidence boundary (no human listen, SME, brand, or legal review); open owner decisions
+Where the video and player are; the story and what it leaves out; each claim with its source; how
+long it took; the evidence boundary (which LISTEN.md lines the person has heard; no SME, brand, or legal review); open owner decisions
 (branding and external use, contested claims, anything left changed in a shared demo environment); and disk to
 reclaim (raw takes and clips). Distinguish "the video is done" from "the video is approved for customers".
 

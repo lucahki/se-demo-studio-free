@@ -1,14 +1,15 @@
 # Pipeline: the toolkit, step by step
 
 Every job folder (`jobs/<slug>/`) is a copy of `toolkit/job-template/`. Run commands from the job folder unless
-a path starts with `scripts/` (studio root). Every paid call checks the job's cap first and logs its billed cost
-to `logs/costs.jsonl`. This order was tested end to end on 2026-09-28.
+a path starts with `scripts/` (studio root). Nothing calls a paid or remote service: the voice and Whisper run
+on this Mac. This order was tested end to end on 2026-09-28, and with the local voice and Whisper on 2026-10-19.
 
 ## 0. Configure the job
 
-`job.json`: `title`, `disclosure` (player page), `budget_usd`, `hours`, `chrome_port` (assigned by new-job.sh),
+`job.json`: `title`, `disclosure` (player page), `hours`, `chrome_port` (assigned by new-job.sh),
 `app_url` (landing page for new tabs), `app_match` (URL fragment of the product tab), `theme` (`light`, `dark`,
-or `null`), `respell` (spoken form to written form, e.g. `{"S D WAN": "SD-WAN"}`), and `music` (see step 5).
+or `null`), `respell` (spoken form to written form, e.g. `{"S D WAN": "SD-WAN"}`), `voice` (Kokoro voice and speed, see
+step 3), and `music` (see step 5).
 
 ## 1. Browser, exploration, capture
 
@@ -100,16 +101,18 @@ mark('owner_done');
 
 | Step | Command |
 |---|---|
-| Current voices | `python3 lib/models.py speech` |
-| Audition on a short paragraph | `python3 lib/take.py A1_iapetus google/gemini-3.8-flash-tts Iapetus --dir audio/audition --text audio/audition/sample.txt` |
-| Full take | `python3 lib/take.py T1_iapetus google/gemini-3.8-flash-tts Iapetus` |
-| Word timestamps | `python3 lib/stt.py audio/takes/T1_iapetus.wav` |
-| Wording check vs script | `python3 lib/check_take.py T1_iapetus [T2_...]` |
-| Judge takes by ear | `PURPOSE="judge takes" python3 lib/chat.py openai/gpt-audio prompt.txt review/judge.json audio/takes/T1.wav audio/takes/T2.wav` |
-| Assemble narration | `python3 lib/build_voice.py T1_iapetus [segment=T2_iapetus ...]` -> `audio/voice.wav`, `build/cues.json`; it ends with an edge check, and any `EDGE MISMATCH` means a paragraph lost its first or last word (L55), except when a number word was transcribed as digits ("three" as "3"): check those by ear. Decide a join by its `JOIN` numbers, not by asking the listening model; use the listening model for missing or misread words and artifacts (L56) |
+| Voices and grades | `python3 lib/audition.py --list` |
+| Audition (the owner picks by ear) | `python3 lib/audition.py [voice ...] [--text FILE] [--speed 1.0]`, then `afplay audio/audition/A_<voice>.wav` |
+| Full take | `python3 lib/take.py T1` (voice and speed from job.json), or `python3 lib/take.py T2 af_heart --speed 0.95` |
+| Word timestamps | `python3 lib/stt.py audio/takes/T1.wav` (local Whisper large-v3-turbo) |
+| Wording check vs script | `python3 lib/check_take.py T1 [T2 ...]` |
+| Assemble narration | `python3 lib/build_voice.py T1 [segment=T2 ...]` -> `audio/voice.wav`, `build/cues.json`; it ends with an edge check, and any `EDGE MISMATCH` means a paragraph lost its first or last word (L55), except when a number word was transcribed as digits ("three" as "3"): check those by ear. Decide a join by its `JOIN` numbers (L56). Missing or misread words show in `check_take.py`; pronunciation and artifacts are for the owner's listen (`review/LISTEN.md`) |
 
-Use `--extra '{"instructions": "..."}'` only for a model whose style field you have tested. Gemini TTS returns
-raw PCM; take.py converts it.
+Kokoro has no style field, only `--speed` (0.5 to 2.0; 0.9 to 1.1 sounds natural). take.py reads each paragraph
+on its own and joins them with `--gap` seconds of silence (default 0.7), so cuts land in clean gaps. The same text
+and settings give a byte-identical take: to change a read, change the words, punctuation, or speed, and take a
+paragraph from that take with `segment=T2`. `--engine say` (macOS voices) is for drafts only: Apple licenses those
+voices for personal, non-commercial use.
 
 ## 4. Picture
 
@@ -140,11 +143,12 @@ in timeline seconds), not to word times: word-keyed moves drift onto the wrong c
 |---|---|
 | Click and key sounds | `python3 lib/sfx.py` (once) |
 | Sound cue sheet | `python3 lib/sfx_events.py` |
-| Music bed | `python3 lib/music.py google/lyria-3-pro-preview prompt.txt audio/music/bed1` (make 2 or 3, judge them) |
+| Music (optional, off by default) | No generator. Put a track the owner has the rights to in `audio/music/` and set job.json `music` |
 | Mix and master | `python3 lib/mix.py out/mix.wav` (-16 LUFS; music windows from job.json, ducked under voice) |
 
-job.json `music`: `{"file": "audio/music/bed1.wav", "level_db": -9, "windows": [["intro", "plan"], ["close", null]]}`.
-Each window runs from the first segment's start to the second segment's end (`null` = to the end).
+job.json `music`: `{"file": "audio/music/track.mp3", "level_db": -9, "windows": [["intro", "plan"], ["close", null]]}`.
+Each window runs from the first segment's start to the second segment's end (`null` = to the end). An empty
+`file` (the default) means no music.
 
 ## 6. Render and deliver
 
@@ -152,11 +156,12 @@ Each window runs from the first segment's start to the second segment's end (`nu
 |---|---|
 | Full render with audio | `build/render_par.sh out/<slug>_v1.mp4 8 out/mix.wav` (prints any page errors) |
 | Captions and player | `python3 lib/deliver.py <slug>_v1.mp4` -> `out/*.srt`, `out/*.vtt`, `player.html` |
-| Spend so far | `python3 lib/spend.py` |
 
 ## Review helpers
 
-- `lib/chat.py MODEL prompt.txt out.json frames...`: send frames or audio to a reviewer model.
+- Frame review by Claude: render stills (`node build/render.js stills ...`), make contact sheets with
+  `lib/grid.py`, and read the images directly. For the second round, give a fresh general-purpose subagent only
+  the review package and the questions, not the script-writing history.
 - `lib/grid.py out.jpg 3 files...`: contact sheet of any images.
 - The `claim-checker` agent: checks the talk track and on-screen text against `research/SOURCES.md`.
 
@@ -164,5 +169,9 @@ Each window runs from the first segment's start to the second segment's end (`nu
 
 A smoke job on 2026-09-28 ran every step above against a public page with a free voice model: capture, take,
 alignment, voice assembly, clips, cursor, sound effects, mix, stills, an 8-chunk render (39.7 s, 1920x1080, 30
-fps, AAC audio), captions, and the player. Whisper transcription was not exercised in that run because the test
-account had no credits; it is the same code the Cloud Control demo used.
+fps, AAC audio), captions, and the player.
+
+The free, local mode was tested with the test run on 2026-10-19 on an Apple Silicon Mac: Kokoro `am_michael`
+read the 5-paragraph script (44.6 s of speech) in 11 s, local Whisper timed all 119 words in 7 s with no
+wording differences, `build_voice.py` ended with `edge check: ok`, and the 55.4 s render, captions, and player
+completed with no music. Voice and word timing ran from the files in `toolkit/models`.

@@ -9,10 +9,13 @@ This folder is a studio for recording narrated virtual SE product demos from a l
 - Run on Opus 5.5 at high effort (`claude-opus-5-5`, set in `.claude/settings.json`). If the session is on
   another model or effort, ask the person to run `/model claude-opus-5-5` and `/effort high` before continuing.
   Subagents and NodeTerm sessions use the same exact model id, never the `opus` alias.
-- Never read `.env`, never ask for or print the OpenRouter key, and never type or store passwords, codes,
-  cookies, or tokens for the person. Never record or screenshot a sign-in page.
+- Never read `.env`, and never type or store passwords, codes, cookies, or tokens for the person. Never record
+  or screenshot a sign-in page.
 - Demo environments with fictional data only (dCloud, a lab, or the person's own sandbox). Never a customer's
-  tenant or production system: its screens would go to Anthropic and to OpenRouter models.
+  tenant or production system: its screens would go to Anthropic.
+- This copy is the free, local mode (git branch `free-local`). The voice (Kokoro) and word timing (Whisper) run
+  on this Mac, music is only a track the person supplies, and Claude does the frame reviews itself. Never call
+  OpenRouter, OpenAI, or any other paid or remote AI service, and never add one back during a job.
 - Work for a job stays in `jobs/<slug>/`. Do not modify `toolkit/`, `examples/`, or `.claude/` during a job;
   improvements to the studio itself are a separate task the person asks for.
 - Learner- and customer-facing copy: no em dashes, no slogan stacks, plain and specific.
