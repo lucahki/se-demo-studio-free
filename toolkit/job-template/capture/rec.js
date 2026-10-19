@@ -50,7 +50,7 @@ const C = require('./cdp'); const fs = require('fs'); const path = require('path
   const typed = async (sel = '[contenteditable=true], textarea, input[type=text]') => (await page.locator(sel).first().evaluate(e => e.value ?? e.innerText)).trim();
   const wheel = async (dy, steps = 30, ms = 1500) => { for (let i = 0; i < steps; i++) { await page.mouse.wheel(0, dy / steps); await sleep(ms / steps); } };
   const mark = k => log.marks.push({ t: Date.now() / 1000, k });
-  await page.addStyleTag({ content: C.HIDE_CSS + ' #onetrust-banner-sdk,.cookie-banner{display:none!important}' }).catch(() => {});
+  await page.addStyleTag({ content: C.HIDE_CSS + ' #onetrust-banner-sdk,.onetrust-pc-dark-filter,.cookie-banner{display:none!important}' }).catch(() => {});
   await page.mouse.move(cur.x, cur.y);
   page.on('framenavigated', f => { if (f === page.mainFrame()) guard(); });
   const guardTimer = setInterval(guard, 1500);
