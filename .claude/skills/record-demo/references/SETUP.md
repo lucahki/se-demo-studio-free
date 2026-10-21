@@ -17,12 +17,13 @@ Node.js, Python, or Chrome installers may need IT.
 | Google Chrome | Install from https://www.google.com/chrome into Applications (the system one or the one in their home folder). Capture drives a separate Chrome window with its own profile, so their normal browsing is untouched. |
 | toolkit install | `(cd toolkit && npm install)` and read any error. Behind a corporate proxy, ask IT for the proxy address and run `npm config set proxy <that address>`. |
 | local tools install, Kokoro voice (local), Whisper (local), local tools | See "Local voice and Whisper" below. |
+| Chatterbox voice (optional) | Information only. "not installed" is fine unless a job picks Chatterbox; see "Chatterbox voice" below. |
 | pdftotext (optional) | `brew install poppler`. Needed only when an official source is a PDF (a data sheet, for example); without it that source fails to fetch and the researcher uses another page. |
 | NodeTerm | Recommended; download from https://nodeterm.dev. Without it the builder runs in a second Terminal window (references/SUPERVISING.md). |
 
 ## Local voice and Whisper
 
-This studio runs free: no OpenRouter or other paid account, and no key. Setup installs, inside `toolkit/` and
+By default this studio runs free: no OpenRouter or other paid account, and no key. Setup installs, inside `toolkit/` and
 without admin rights:
 
 | What | Why | Download | On disk |
@@ -53,6 +54,45 @@ If a line fails:
 - **local tools install FAILED** or **BROKEN**: delete `toolkit/.venv` and rerun `scripts/setup.sh`.
 - Disk: the tools take about 2.6 GB; deleting the `toolkit/.venv`, `.uv`, `.python`, and `models` folders removes
   them completely.
+
+## Chatterbox voice (optional, free)
+
+Only when a job picks it. `scripts/setup-chatterbox.sh` installs it inside `toolkit/`, without admin rights, and
+ends with "CHATTERBOX OK"; rerun it any time as a check.
+
+| What | Download | On disk |
+|---|---|---|
+| Python 3.11 (in `toolkit/.python`) and packages in `toolkit/.venv-chatterbox`, pinned in `toolkit/requirements-chatterbox.txt` (PyTorch 2.6.0, chatterbox-tts 0.1.7) | about 320 MB | about 1.3 GB |
+| Chatterbox model, pinned to one Hugging Face commit (`toolkit/models/chatterbox`) | 3.2 GB | 3.2 GB |
+
+Every model file is checked against its size and SHA-256. Licenses: the Chatterbox code and weights are MIT
+(Resemble AI). Its packages are permissive except pykakasi (GPL-3.0, Japanese text only) and soxr (LGPL-2.1),
+fine to run for the same reason as phonemizer above. It runs on the Mac GPU: about 7 times slower than real time
+on an M1 Pro with 16 GB. Every take carries Resemble's inaudible Perth watermark, which marks it as AI speech.
+If "Chatterbox (local) BROKEN": delete `toolkit/.venv-chatterbox` and rerun. To remove it: delete
+`toolkit/.venv-chatterbox` and `toolkit/models/chatterbox`.
+
+## OpenRouter voice (optional, paid)
+
+Only for someone who picks it and has their own OpenRouter account; nothing else in the studio uses OpenRouter.
+It receives the script text (and the voice provider behind it does too). Walk them through, in order:
+
+1. **Account and credits** at https://openrouter.ai and https://openrouter.ai/settings/credits. A few dollars
+   covers many jobs: a 5-minute script is about $0.08 a take.
+2. **Key** at https://openrouter.ai/settings/keys, with a **credit limit** on it (for example $5) so a runaway job
+   cannot overspend. `check-openrouter.sh` does not pass without a limit.
+3. **Save it in the studio `.env`, never in the chat.** If there is no `.env` yet, they run
+   `cp .env.example .env && chmod 600 .env`, then `open -e .env` (TextEdit), paste the key after
+   `OPENROUTER_API_KEY=` with no spaces or quotes, and save. If they paste the key into the chat anyway, tell
+   them to delete that key on the keys page and create a new one.
+4. **Verify** with `scripts/check-openrouter.sh`. It prints usage and limit, never the key. HTTP 401 means the
+   key is wrong; "OUT OF CREDITS (402)" from a later take means the account balance is empty.
+5. If a take fails with a message about data policy or "no endpoints found", try the other voice model in
+   references/MODELS.md before touching https://openrouter.ai/settings/privacy, and tell them first that
+   allowing more providers means those providers receive the script text.
+
+Never read `.env` yourself (the studio settings deny it); `lib/take.py` loads the key on its own. Each job caps
+its voice spend with job.json "voice" "budget_usd" (default $2).
 
 ## Claude Code
 

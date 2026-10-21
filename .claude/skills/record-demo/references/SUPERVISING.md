@@ -90,6 +90,8 @@ Ask for approval or changes. Then append `STORYBOARD APPROVED` (with any changes
 - Go through `review/LISTEN.md` with the person: each line with its time in `audio/voice.wav` (they can play it
   with `afplay` or in QuickTime). You cannot hear audio, so pronunciation and artifacts are their call; pass
   any rewording back to the builder.
+- With the OpenRouter voice only: the voice spend so far is the sum of `cost` in `logs/costs.jsonl`, against
+  job.json "voice" "budget_usd"; include it in the final report. Raise the cap only with the person's yes.
 
 ## Final report to the person
 

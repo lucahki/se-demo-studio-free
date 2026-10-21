@@ -194,3 +194,26 @@ others. Check your company's open source policy if it asks for GPL tools to be r
   `take.py`, `stt.py`), so a merge can need conflicts resolved by hand.
 - **One recorded end-to-end test.** The branch documents one full test: the test run on 2026-10-19 (a
   55-second video, no music). Longer demos have no recorded result yet in the studio's notes.
+
+## 8. Later change: a choice of three voice engines (2026-10-21)
+
+After a side-by-side listening test, the voice step now asks which engine to use. Kokoro stays the default, and a
+job with no `"engine"` in job.json is still Kokoro, so older jobs are unchanged.
+
+| Engine | What it is | Cost and where it runs | Tested |
+|---|---|---|---|
+| `kokoro` | Kokoro v1.0, as before | Free, on the Mac, about 4 times faster than real time | Unchanged; a take from the new `take.py` matched the old behavior |
+| `chatterbox` | Chatterbox original English model (Resemble AI, MIT), built-in voice, default speed 0.94 | Free, on the Mac GPU, about 7 times slower than real time on an M1 Pro; installed only when picked (`scripts/setup-chatterbox.sh`, about 3.5 GB) | Install, take, audition, Whisper alignment; the agenda paragraph read in 2 minutes for 18.4 s of speech |
+| `openrouter` | `google/gemini-3.8-flash-tts`, voice Iapetus, the original studio's voice | Paid from the person's own key in `.env`, voice only, capped per job by `budget_usd` (default $2) | Only that it stops before any network call when no key is set; no paid take was made |
+
+Findings from the test: Chatterbox's reads differ run to run even with the same seed on the Mac GPU. Its default
+pace sounded rushed; a 6% pitch-preserving stretch (speed 0.94) was the take preferred by ear. VoxCPM2 (OpenBMB,
+Apache-2.0, 2B) was also tried and dropped: on a 16 GB M1 Pro its maintainers force full precision on the GPU,
+which swapped (about 30 s per step), and the CPU path was still too slow for full scripts.
+
+Files: `lib/take.py` (engines), `lib/audition.py` (`--engine`), `lib/common.py` (Chatterbox paths, OpenRouter
+key loader, request, cost log, and voice cap restored from main for the voice only), `job.json` (`"engine"`),
+new `scripts/setup-chatterbox.sh` and `toolkit/requirements-chatterbox.txt`, restored `scripts/check-openrouter.sh`
+and `.env.example` (voice only), `scripts/setup.sh` (an optional Chatterbox status line), `.gitignore`,
+`.claude/settings.json` (allows the two scripts), `CLAUDE.md`, the skill and its references, and the README.
+Word timing, reviews, music, and everything else stay local.

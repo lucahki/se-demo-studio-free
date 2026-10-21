@@ -1,7 +1,8 @@
 .env
 toolkit/node_modules/
-# local voice and transcription tools and models, installed by scripts/setup.sh
+# local voice and transcription tools and models, installed by scripts/setup.sh (and setup-chatterbox.sh)
 toolkit/.venv/
+toolkit/.venv-chatterbox/
 toolkit/.uv/
 toolkit/.uv-cache/
 toolkit/.python/

@@ -8,6 +8,6 @@
   "app_match": "example.com",
   "theme": "light",
   "respell": {},
-  "voice": {"name": "am_michael", "speed": 1.0},
+  "voice": {"engine": "kokoro", "name": "am_michael", "speed": 1.0},
   "music": {"file": "", "level_db": -9, "windows": [["intro", "plan"], ["close", null]]}
 }

@@ -102,15 +102,35 @@ by its full `{{...}}` text, never by a key prefix: a script that matches `{{PROD
 starts with the same word. Check that no `{{` remains (`grep -n '{{' jobs/<slug>/PROMPT.md`). Tell the person in three or four lines what the builder will
 do and that it will stop for their approval at the storyboard.
 
-**Voice audition (before launch).** In the job folder, run `python3 lib/audition.py`. It reads one short sample
-in seven Kokoro voices on this Mac and prints a play command and a quality grade for each (`--list` shows all
-English voices; `--text <file>` uses a line of their own script; name voices to try others). Ask the person to
-play them (`afplay audio/audition/A_<voice>.wav`, or double-click the files in Finder): you cannot hear audio, so
-the choice is theirs. Say plainly that Kokoro's best male voices grade C+ and its best female voices A and A-, so
-it is worth hearing both even if they asked for one. Offer a speed of 0.9 to 1.1 for the pick
-(`python3 lib/audition.py <voice> --speed 0.95`). Save it in job.json `"voice": {"name": ..., "speed": ...}`
-and in PROMPT.md's voice slot and "Owner decisions". Never use `--engine say` for a video: Apple licenses the
-macOS voices for personal, non-commercial use only.
+**Voice audition (before launch).** First the voice engine they picked in the interview (INTERVIEW.md question
+11), then the voice itself by ear. You cannot hear audio, so the choice is theirs: ask them to play each sample
+(`afplay audio/audition/<file>.wav`, or double-click the files in Finder). Each audition command prints its play
+commands; `--text <file>` uses a line of their own script.
+
+- **Kokoro** (free, on this Mac, fast; the default). Run `python3 lib/audition.py`: one short sample in seven
+  voices, each with its quality grade (`--list` shows all English voices; name voices to try others). Say plainly
+  that Kokoro's best male voices grade C+ and its best female voices A and A- (`af_heart` A), so it is worth
+  hearing both even if they asked for one. Offer a speed of 0.9 to 1.1 for the pick
+  (`python3 lib/audition.py <voice> --speed 0.95`). Save as `"voice": {"engine": "kokoro", "name": ..., "speed": ...}`.
+- **Chatterbox** (free, on this Mac, slow). Check that `scripts/setup-chatterbox.sh` ends with "CHATTERBOX OK";
+  if it is not installed, tell them it downloads about 3.5 GB once, and run it only after they agree. Then
+  `python3 lib/audition.py --engine chatterbox` (about a minute). It has one voice, `builtin`, read 6% slower by
+  default (speed 0.94, picked by ear as less rushed than 1.0). It takes about 7 times real time on an M1 Pro, so
+  a 4-minute script needs about 30 minutes per full take: count that in the time budget. Takes are not
+  repeatable: the same settings give a slightly different read each run. Every file carries an inaudible
+  watermark marking it as AI speech. Another voice means cloning a clip they have the rights to (about 10 s of
+  clean speech, saved in the job folder, its path as `name`). Save as
+  `"voice": {"engine": "chatterbox", "name": "builtin", "speed": 0.94}`.
+- **OpenRouter** (paid, from their own account). Only if they chose it and have their own OpenRouter account.
+  Tell them the script text goes to OpenRouter and the voice provider, and that it costs about $0.08 for a
+  5-minute script. Walk them through the key (references/SETUP.md "OpenRouter voice (optional, paid)") and run
+  `scripts/check-openrouter.sh`; never ask for the key in chat and never read `.env`. Then
+  `python3 lib/audition.py --engine openrouter` (`Iapetus` and `Charon` on `google/gemini-3.8-flash-tts`, about
+  1 cent each). Save as `"voice": {"engine": "openrouter", "model": "google/gemini-3.8-flash-tts", "name": "Iapetus",
+  "budget_usd": 2}`; `budget_usd` caps this job's voice spend, and raising it needs their yes.
+
+Save the pick in job.json and in PROMPT.md's voice slot and "Owner decisions". Never use `--engine say` for a
+video: Apple licenses the macOS voices for personal, non-commercial use only.
 
 ## Step 5: launch and supervise
 
@@ -125,7 +145,8 @@ decision back; check the rough cut; give the final report.
 - The person's words in the interview outrank these defaults; write every change into PROMPT.md's "Owner
   decisions".
 - Never type, read, or store passwords, one-time codes, cookies, or tokens.
-- Never call a paid or remote AI service (OpenRouter, OpenAI, or any other). Everything except Claude runs on this Mac.
+- Never call a paid or remote AI service (OpenRouter, OpenAI, or any other). Everything except Claude runs on this
+  Mac. The one exception is the OpenRouter voice, through `lib/take.py` only, when the person picked it for this job.
 - Never do tenant administration in a demo environment, except the specific changes the person allowed by name in
   the interview, each with its reset rule and logged; never touch another job's Chrome port.
 - Never record, screenshot, or keep a sign-in, SSO, password, or one-time-code page. If a raw frame or screenshot
@@ -143,5 +164,5 @@ decision back; check the rough cut; give the final report.
 - references/PIPELINE.md: every toolkit command in order.
 - references/LESSONS_LEARNED.md: the history behind each rule's (L7) citation; not required reading.
 - references/CISCO_CLAIM_RULES.md: sourcing, wording, and branding for Cisco products.
-- references/MODELS.md: Claude, the Kokoro voices with their grades, and Whisper.
+- references/MODELS.md: Claude, the three voice engines (Kokoro with its grades, Chatterbox, OpenRouter), and Whisper.
 - examples/cloud-control-se-demo/ (studio root): a finished 5-minute demo, end to end.

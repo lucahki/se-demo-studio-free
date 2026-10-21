@@ -36,9 +36,10 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
 - NodeTerm (recommended): a terminal app that shows each Claude session as a window on a canvas, so you can watch
   the builder next to the session you talk to. Download it from https://nodeterm.dev.
   Without it, the builder runs in a second Terminal window.
-- No paid services and no API keys. The voice (Kokoro) and word timing (Whisper) run on your Mac, music is
-  optional and only a track you supply, and Claude does the frame reviews itself. Claude usage comes from your
-  Claude plan.
+- No paid services and no API keys by default. The voice (Kokoro, or Chatterbox if you pick it) and word timing
+  (Whisper) run on your Mac, music is optional and only a track you supply, and Claude does the frame reviews
+  itself. Claude usage comes from your Claude plan. If you have your own OpenRouter account, you can pick its
+  paid voice instead (see "Choosing a voice" below).
 - A demo environment: a Cisco dCloud instant demo, a partner or Cisco lab, or your own sandbox with fictional
   data. Never a customer's tenant or production system. You sign in yourself, once, in a separate Chrome window
   Claude opens for the job; Claude looks around your environment in that same window. Claude never records
@@ -50,14 +51,15 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
 
 - **Anthropic (Claude):** everything Claude reads while it works, including the product screens it explores, page
   text, screenshots, and the files in the job folder.
-- **Nothing else.** The voice and word timing run on your Mac. Setup downloads the tools once, from PyPI,
+- **Nothing else**, unless you pick the paid OpenRouter voice: then the script text goes to OpenRouter. With
+  Kokoro or Chatterbox, the voice and word timing run on your Mac. Setup downloads the tools once, from PyPI,
   GitHub, and Hugging Face.
 - This is why the studio is for demo environments with fictional data only.
 
 ## How a job runs
 
-1. **Interview** (5 minutes): product, audience, story, how far the demo may act, redaction, time. Then you
-   pick the voice by ear from a short audition.
+1. **Interview** (5 minutes): product, audience, story, how far the demo may act, redaction, time, and the
+   voice engine. Then you pick the voice by ear from a short audition.
 2. **Research and sign-in**: an agent quotes official sources; you sign in to the demo in the job's Chrome.
 3. **Exploration and storyboard**: the builder explores the product, picks one story the data supports, and
    stops with a storyboard and full talk track for your approval.
@@ -88,18 +90,28 @@ nothing:
 
 | Part | Original | Here |
 |---|---|---|
-| Narration voice | OpenRouter voice models | Kokoro v1.0 on your Mac (`lib/take.py`); you pick the voice with `lib/audition.py` |
+| Narration voice | OpenRouter voice models | Kokoro v1.0 on your Mac by default, or Chatterbox on your Mac, or the OpenRouter voice if you have your own account (`lib/take.py`); you pick with `lib/audition.py` |
 | Word timing | Whisper through OpenRouter | Whisper large-v3-turbo on your Mac (`lib/stt.py`, mlx-whisper) |
 | Music | Generated beds | None by default; optionally your own track |
 | Reviews and listening checks | OpenRouter models | Claude reads the frames itself; you do the listening |
 | AI caller | ChatGPT voice mode | Removed |
-| Spend caps | Per job and per key | Removed: nothing costs money |
+| Spend caps | Per job and per key | Only with the OpenRouter voice: a per-job voice cap (`budget_usd`, default $2) and the key's own limit |
 
 The tools are free, and their licenses allow use in a work demo: Kokoro model Apache-2.0; kokoro-onnx, ONNX
 Runtime, MLX, mlx-whisper, and the Whisper weights MIT. Kokoro uses espeak-ng and phonemizer (GPL-3.0) for
 pronunciation; running them and using the audio is fine. macOS `say` is available for drafts only, because
 Apple's license allows its voices for personal, non-commercial use. Details are in
 `.claude/skills/record-demo/references/SETUP.md`.
+
+### Choosing a voice
+
+The interview asks which voice engine to use, then you pick the voice by ear:
+
+| Engine | Cost | Speed on an M1 Pro | Notes |
+|---|---|---|---|
+| Kokoro (default) | Free, on your Mac | A 4-minute script in about a minute | Best voices are female (`af_heart` A); male voices grade C+ |
+| Chatterbox | Free, on your Mac | About 30 minutes per full take of a 4-minute script | One built-in voice, read 6% slower by default. Installed the first time a job picks it (`scripts/setup-chatterbox.sh`, about 3.5 GB). MIT license; every take carries an inaudible AI watermark |
+| OpenRouter | Paid, your own account (about $0.08 for 5 minutes) | Seconds | `google/gemini-3.8-flash-tts`, voice Iapetus, as in the original studio. Your key goes in `.env` (see `.env.example`), never in the chat; the script text leaves your Mac |
 
 To go back to the original at any time: `git switch main` (and `git switch free-local` to return).
 

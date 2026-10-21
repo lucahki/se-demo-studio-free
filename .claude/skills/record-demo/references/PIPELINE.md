@@ -2,13 +2,13 @@
 
 Every job folder (`jobs/<slug>/`) is a copy of `toolkit/job-template/`. Run commands from the job folder unless
 a path starts with `scripts/` (studio root). Nothing calls a paid or remote service: the voice and Whisper run
-on this Mac. This order was tested end to end on 2026-09-28, and with the local voice and Whisper on 2026-10-19.
+on this Mac, except `lib/take.py` when the owner picked the paid OpenRouter voice. This order was tested end to end on 2026-09-28, and with the local voice and Whisper on 2026-10-19.
 
 ## 0. Configure the job
 
 `job.json`: `title`, `disclosure` (player page), `hours`, `chrome_port` (assigned by new-job.sh),
 `app_url` (landing page for new tabs), `app_match` (URL fragment of the product tab), `theme` (`light`, `dark`,
-or `null`), `respell` (spoken form to written form, e.g. `{"S D WAN": "SD-WAN"}`), `voice` (Kokoro voice and speed, see
+or `null`), `respell` (spoken form to written form, e.g. `{"S D WAN": "SD-WAN"}`), `voice` (engine, voice, and speed, see
 step 3), and `music` (see step 5).
 
 ## 1. Browser, exploration, capture
@@ -104,18 +104,27 @@ mark('owner_done');
 
 | Step | Command |
 |---|---|
-| Voices and grades | `python3 lib/audition.py --list` |
-| Audition (the owner picks by ear) | `python3 lib/audition.py [voice ...] [--text FILE] [--speed 1.0]`, then `afplay audio/audition/A_<voice>.wav` |
-| Full take | `python3 lib/take.py T1` (voice and speed from job.json), or `python3 lib/take.py T2 af_heart --speed 0.95` |
+| Install Chatterbox (once, only if picked) | `scripts/setup-chatterbox.sh` (root; about 3.5 GB) |
+| Check the OpenRouter key (only if picked) | `scripts/check-openrouter.sh` (root; prints usage and limit, never the key) |
+| Kokoro voices and grades | `python3 lib/audition.py --list` |
+| Audition (the owner picks by ear) | Kokoro: `python3 lib/audition.py [voice ...] [--text FILE] [--speed 1.0]`, then `afplay audio/audition/A_<voice>.wav`. Chatterbox: `python3 lib/audition.py --engine chatterbox [--speed 0.94]`. OpenRouter (paid): `python3 lib/audition.py --engine openrouter [Iapetus Charon ...]`. Each prints its play commands |
+| Full take | `python3 lib/take.py T1` (engine, voice, and speed from job.json), or override: `python3 lib/take.py T2 af_heart --speed 0.95` |
+| Redo some paragraphs | put just those paragraphs in a file and `python3 lib/take.py T3 --text FILE`; `check_take.py T3` then lists the other paragraphs as unaligned, which is expected; join with `build_voice.py T1 segment=T3` |
 | Word timestamps | `python3 lib/stt.py audio/takes/T1.wav` (local Whisper large-v3-turbo) |
 | Wording check vs script | `python3 lib/check_take.py T1 [T2 ...]` |
 | Assemble narration | `python3 lib/build_voice.py T1 [segment=T2 ...]` -> `audio/voice.wav`, `build/cues.json`; it ends with an edge check, and any `EDGE MISMATCH` means a paragraph lost its first or last word (L55), except when a number word was transcribed as digits ("three" as "3"): check those by ear. Decide a join by its `JOIN` numbers (L56). Missing or misread words show in `check_take.py`; pronunciation and artifacts are for the owner's listen (`review/LISTEN.md`) |
 
-Kokoro has no style field, only `--speed` (0.5 to 2.0; 0.9 to 1.1 sounds natural). take.py reads each paragraph
-on its own and joins them with `--gap` seconds of silence (default 0.7), so cuts land in clean gaps. The same text
-and settings give a byte-identical take: to change a read, change the words, punctuation, or speed, and take a
-paragraph from that take with `segment=T2`. `--engine say` (macOS voices) is for drafts only: Apple licenses those
-voices for personal, non-commercial use.
+job.json `"voice"` by engine (a job without `"engine"` is Kokoro):
+
+| Engine | Fields (defaults) | Notes |
+|---|---|---|
+| `kokoro` | `name` (`am_michael`), `speed` (1.0) | Free, on this Mac, about 4 times faster than real time. No style field, only speed (0.5 to 2.0; 0.9 to 1.1 sounds natural). The same text and settings give a byte-identical take: to change a read, change the words, punctuation, or speed. |
+| `chatterbox` | `name` (`builtin`, or a reference clip's path in the job folder), `speed` (0.94), `seed` (1), `exaggeration` (0.5), `cfg_weight` (0.5) | Free, on this Mac (Mac GPU), about 7 times slower than real time on an M1 Pro. Speed is a pitch-preserving stretch after the read. Lower `cfg_weight` (0.3) slows the pacing; higher `exaggeration` is more expressive but faster. Reads vary run to run even with the same seed. Paragraphs over 90 words are read in parts split at sentence ends (it stops after about 40 s per call). Every take carries an inaudible Perth watermark. |
+| `openrouter` | `model` (`google/gemini-3.8-flash-tts`), `name` (`Iapetus`), `speed` (1.0), `budget_usd` (2) | Paid, from the owner's key in the studio `.env`; the whole text goes in one call (about $0.08 for 5 minutes), logged in `logs/costs.jsonl` and stopped at `budget_usd`. `Charon` suits ads better. Speed is a stretch after the read. |
+
+Kokoro, Chatterbox, and `say` read each paragraph on their own and join them with `--gap` seconds of silence
+(default 0.7), so cuts land in clean gaps; OpenRouter reads the text in one call and the cuts use its own pauses.
+`--engine say` (macOS voices) is for drafts only: Apple licenses those voices for personal, non-commercial use.
 
 ## 4. Picture
 

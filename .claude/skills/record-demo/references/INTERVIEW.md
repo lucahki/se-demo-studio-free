@@ -21,7 +21,8 @@ for a yes.
    site. Customer environments are not allowed: if the answer is a customer's tenant or production system, say
    so plainly and help them pick a demo environment instead. Also tell them, before the job is created, what
    leaves their Mac: Claude sees the product screens, page text, and the job's files. The voice and word timing
-   run on their Mac, so the narration audio goes nowhere else.
+   run on their Mac, so the narration audio goes nowhere else, unless they pick the paid OpenRouter voice
+   (question 11), which sends the script text to OpenRouter.
    If it is their own environment (a sandbox or lab they built), create the job right away and do your
    reconnaissance in the job's Chrome (SKILL.md Steps 2 and 3), so they sign in once and the facts you check land
    in INTERVIEW.md.
@@ -61,8 +62,15 @@ for a yes.
 10. **Branding and distribution.** Internal draft (default), or intended for customers. Remind them that nothing
     here is brand, legal, or SME reviewed, and that customer-facing use is their decision after review.
 11. **Voice.** Default "a calm, assured, technical demo voice, not a marketing voice". Any preference on gender,
-    accent, or pace. Product names that are often mispronounced. They pick the actual voice by ear in a short
-    audition before the build (SKILL.md Step 4).
+    accent, or pace. Product names that are often mispronounced. Then which voice engine, with these trade-offs
+    (default Kokoro):
+    - **Kokoro**: free, on their Mac, fast (a 4-minute script in about a minute). Best voices are female
+      (`af_heart` A); the best male voices only grade C+.
+    - **Chatterbox**: free, on their Mac, a more natural read with one built-in voice. Slow: about 30 minutes
+      per full take of a 4-minute script on an M1 Pro, and the first use downloads about 3.5 GB.
+    - **OpenRouter**: paid from their own OpenRouter account (about $0.08 for a 5-minute script), and the script
+      text leaves their Mac. Only for someone who already has, or wants, an account and a key.
+    They pick the actual voice by ear in a short audition before the build (SKILL.md Step 4).
 12. **Time and music.** The time limit (default 4 hours) and when they need it by. Music: none by default; if
     they want some, they supply a track they have the rights to.
 
