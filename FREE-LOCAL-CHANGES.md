@@ -86,8 +86,10 @@ message instead of mixing without it.
   `git fetch origin`, then `git merge origin/main`, and how to switch between the two versions
   (`git switch main`, `git switch free-local`).
 
-Cursor behavior did not change on this branch: `lib/cursor_tracks.py` and the cursor guidance in the skill are
-the same as on `main`.
+- **Cursor rules (L66).** This branch adds default cursor rules that `main` does not have: eased moves only,
+  park the cursor before a wait, prefer a 4x to 8x speed-up to a cut, fade the cursor at cuts (`cursorOff` in
+  `build/story.js`, drawn by `build/scenes.js`), and a jump check at the end of `lib/cursor_tracks.py` that
+  prints `CURSOR JUMP` and `CURSOR CUT` lines. The rules are in the builder prompt template and `PIPELINE.md`.
 
 ## 5. Setup
 

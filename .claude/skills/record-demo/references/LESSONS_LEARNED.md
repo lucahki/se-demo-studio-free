@@ -110,6 +110,14 @@ L32. **Disk:** a 5-minute job reached 9.7 GB (raw screencast 5.4 GB, 30 fps clip
     takes as you go and report what can be reclaimed at the end. Waits fill the disk fastest: a 10-minute wait
     that clicked refresh every 5 seconds made 4 GB of raw screencast. During long waits poll less often, record at
     a lower JPEG quality (`JPGQ=75 node capture/rec.js ...`), and delete failed wait takes at once.
+L66. **The drawn cursor jumps wherever the log or the edit skips.** The person running an October 2026 demo
+    job: "the last take had the mouse cursor jumping, likely from cuts in the edit and from instant cursor
+    moves between clicks." The cursor is drawn from the pointer log, so a click with no eased move before it, a cut
+    inside a take, a speed-up over a moving pointer, and a change of take each make it leap. Their rules, which made
+    that job's final video pass a frame-by-frame scan with no jumps: ease every move toward a click; park the
+    cursor before a wait that will be sped up or cut; prefer a 4x to 8x speed-up to a cut; where a cut stays, fade
+    the cursor out and in or cover it with a short push-in; and check the final video for jumps before handing it
+    over. The same scan also caught a camera key inside a cut (a one-frame zoom).
 
 ## Process
 

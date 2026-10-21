@@ -29,7 +29,10 @@ The signed-in session survives a restart.
 
 A take script (`capture/takes/example_take.js`) receives `page, C, mv, click, clickLoc, type, typed, wheel, mark,
 sleep, dtext`. `mark('name')` drops a labeled timestamp into `log.json` that you can find later. Output:
-`capture/rec/<take>/NNNNN.jpg` plus `log.json` (frame times, pointer track, clicks, keys).
+`capture/rec/<take>/NNNNN.jpg` plus `log.json` (frame times, pointer track, clicks, keys). Move the pointer only
+with `mv`, `click`, or `clickLoc`, never a bare `page.mouse` call or `locator.click()`, and before any wait that
+will be sped up or cut, park it with `await mv(x, y)` on a neutral spot and leave it there until the result is on
+screen (L66).
 
 A link inside an embedded product page can open a new tab and break the single screen share: set `target=_self`
 on the anchor before clicking (see `examples/cloud-control-se-demo/code/take_example.js`) (L17).
@@ -129,6 +132,18 @@ At every cut, look at the incoming clip's first frames (`python3 lib/frameat.py 
 "Loading" is still up, move that clip's first key later, to where the screencast stops sending frames (L21).
 
 Rerun `lib/cursor_tracks.py` after any change to cues or clips; the page reads `footage.js` and `cues.js`.
+
+The drawn cursor must never jump (L66). `lib/cursor_tracks.py` ends by walking the timeline frame by frame
+through `SHOTS` and prints:
+- `CURSOR JUMP <time>`: the cursor moves more than 150 capture pixels in one frame inside a shot, usually a
+  speed-up over a moving cursor or a cut inside a take. Park the cursor before that wait and re-record, or move
+  the ramp's keys so it covers only frames where the cursor is still.
+- `CURSOR CUT <time>`: the cursor lands more than 40 pixels away at a change of shot. Add `[time, time]` to
+  `cursorOff` in `build/story.js` (the cursor fades out over 0.25 s before and back in over 0.25 s after), or
+  cover the cut with a short push-in.
+
+It works in capture pixels from the footage tracks, so it does not see fades or push-ins: render stills either
+side of each listed time and look at them. "cursor check: no jumps" is the clean result.
 
 Treat these printed warnings as errors (L57): `WARNING <clip>: key ... dropped` (a cue word matched too early),
 `WARNING shots: ... gap` and `WARNING shots: ... holds still` (from `build_clips.py`). A RAMPS label names what was

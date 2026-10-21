@@ -24,6 +24,7 @@ const STORY = {
     shots: [[S0('walkthrough') - 0.9, S1('walkthrough') + 1.0, 'take1']],          // [from, to, clip] (same as SHOTS in edit.py)
     urls: [[S0('walkthrough') - 0.9, 'app.example.com/home']],                        // [from, address-bar text]
     chapters: [['Start in one place', S0('walkthrough') - 0.9]],                      // [label, from]
+    cursorOff: [],                                                                     // [from, to]: cursor faded out (a cut is [t, t])
     footer: 'Real product UI · demo environment, fictional data',
     lower: 'Virtual SE demo · AI-generated voice',
     // camera keys [time, x, y, zoom] in 1920x1080 capture pixels; zoom 1 = whole screen. Push in to make

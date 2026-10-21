@@ -57,8 +57,9 @@ note. It sets positioning; it does not authorize a technical claim the sources d
   screen share looks. Motion graphics are limited to a short title, at most one agenda card, a short value recap,
   and the close.
 - **Pace.** The cursor moves with purpose, questions are typed on screen, answers arrive, and the SE lets a key
-  screen sit long enough to read. Speed up long waits and label them ("Sped up · the answer took about 75
-  seconds"), but never fake a result or reorder cause and effect. A label names what was compressed, and any
+  screen sit long enough to read. Speed up long waits (4x to 8x) and label them ("Sped up · the answer took about
+  75 seconds"), but never fake a result or reorder cause and effect. Inside a shot, speed a wait up rather than
+  cutting it out, so the cursor and the page stay continuous (L66). A label names what was compressed, and any
   duration stated as fact comes from the system's own timestamps (L51). Never show polling or an idle screen
   waiting for an off-screen event; show something that follows the narration, then cut to the result (L50).
 - **Customer questions.** {{NUMBER, default two or three}} natural moments where the SE answers the question a
@@ -163,8 +164,21 @@ close, and transitions, and none of it may imitate a product screen.
   theme is browser emulation only; if the app has its own account Theme setting, set it to match before the
   first take (L14).
 - The capture has no cursor. `rec.js` logs pointer moves, clicks, and keys; the render draws the cursor from that
-  log. Move along natural curves with short settles, and type with uneven, human timing (L16). Read the box back
-  with `typed()` and press Enter only on an exact match.
+  log, so the drawn cursor jumps wherever the log or the edit skips. Type with uneven, human timing (L16). Read the
+  box back with `typed()` and press Enter only on an exact match.
+- Cursor (L66):
+  - Move only with `mv()`, `click()`, or `clickLoc()`, which ease along a curve with a short settle, like a hand.
+    Never a bare `page.mouse.move`, `page.mouse.click`, or `locator.click()`: the log does not see them, so the
+    drawn cursor is not where the click happens.
+  - Before a wait that will be sped up or cut, park the cursor with `mv()` on a neutral spot away from the text
+    that matters, and keep it still until the result is on screen, so it sits in the same place on both sides.
+  - Prefer a labeled speed-up (4x to 8x, a RAMPS entry) to cutting a wait out. Cut only where a speed-up does not
+    fit the runtime, or where L50 calls for a cut to the result.
+  - At every cut and every join between takes, the cursor must not jump: have it parked at the same spot on both
+    sides, or fade it out and back in (`cursorOff` in `build/story.js`), or cover the cut with a short push-in.
+  - `lib/cursor_tracks.py` ends with a jump check. Before ROUGH CUT READY and again before FINAL READY, fix every
+    `CURSOR JUMP` it prints, fade or park every `CURSOR CUT`, and look at rendered stills either side of each
+    listed time. Say in the README that the check ran and what it found.
 - Record long continuous takes (L18). Check every take right away with `lib/recsheet.py`. Delete superseded and
   failed raw takes as you go, with an absolute path (`rm -rf <job>/capture/rec/<take>`, L60), and record long
   waits at `JPGQ=75` (L32).
@@ -274,7 +288,7 @@ reading the images directly, with no outside models: round 1, read every contact
 round 2, give a fresh general-purpose subagent only the review package and these questions, without the
 script-writing history, so it looks with fresh eyes. Ask each round: does this feel like a
 real SE running a real demo (pace, naturalness, words matching the screen, could a customer follow it), and is
-every claim supported? Also check timing drift, legibility, visual consistency, and redaction misses. In addition,
+every claim supported? Also check timing drift, legibility, visual consistency, cursor jumps (L66), and redaction misses. In addition,
 run the `claim-checker` agent over the final talk track and on-screen text against the sources. Verify each
 finding before acting (L35). Log every finding with its disposition in the README. At most two rounds.
 

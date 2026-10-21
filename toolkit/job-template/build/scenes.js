@@ -81,6 +81,9 @@ scene(t => {
   const shot = FR.shots.find(s => t >= s[0] && t < s[1]) || FR.shots[FR.shots.length - 1];
   const url = (FR.urls.filter(u => t >= u[0]).pop() || FR.urls[0])[1]; if (F._url !== url) { F.setUrl(url); F._url = url; }
   F.only(shot[2]); F.play(shot[2], t, true);
+  // cursor fades: hidden inside each [from, to] of FR.cursorOff, fading over 0.25 s on both sides (L66)
+  const co = Math.min(1, ...(FR.cursorOff || []).map(([a, b]) => 1 - Math.min(ramp(t, a - .25, a), 1 - ramp(t, b, b + .25))));
+  if (co < 1) F.cursor.style.opacity = (+F.cursor.style.opacity || 0) * co;
   const [cx, cy, cz] = camAt(t); F.camera(cx, cy, cz);
   const e = ramp(t, FR.in, FR.in + .9, E.out), x = ramp(t, FR.out - .8, FR.out, E.in);
   placeFrame(F, 1, 960, 541 + lerp(40, 0, e) + 30 * x, lerp(.94, 1, e) * lerp(1, .95, x));

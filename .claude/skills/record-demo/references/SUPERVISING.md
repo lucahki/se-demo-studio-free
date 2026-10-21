@@ -84,6 +84,8 @@ Ask for approval or changes. Then append `STORYBOARD APPROVED` (with any changes
 
 - After the rough cut: render a contact sheet (`python3 lib/grid.py` over stills from
   `node build/render.js stills ...`) and read `script/speech.txt` against `research/CLAIMS.md`.
+- Before FINAL READY reaches the person: the builder's README says the cursor check in `lib/cursor_tracks.py`
+  ran and what it found, every `CURSOR JUMP` is fixed, and every `CURSOR CUT` is faded or parked (L66).
 - Pull full-size frames of any shot with account names, emails, or third-party data if redaction applies.
 - Go through `review/LISTEN.md` with the person: each line with its time in `audio/voice.wav` (they can play it
   with `afplay` or in QuickTime). You cannot hear audio, so pronunciation and artifacts are their call; pass
