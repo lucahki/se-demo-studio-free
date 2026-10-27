@@ -1,11 +1,11 @@
 # Helpers for build/edit.py: read narration cues so every footage key is expressed in narration time.
 #   S('name') / E('name')  start / end of a segment on the final timeline
 #   W('word', 'segment', n=1, end=False)  time of the n-th word starting with 'word' inside a segment
-import json, os, re
+import json, os, re, unicodedata
 from common import JOB
 C = json.load(open(os.path.join(JOB, 'build', 'cues.json')))
 SEG = {s['name']: s for s in C['segments']}
-_norm = lambda s: re.sub(r'[^a-z0-9]', '', s.lower())
+_norm = lambda s: re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode().lower())   # accents folded, as in speech.ntok
 def S(n): return SEG[n]['t0']
 def E(n): return SEG[n]['t1']
 def W(word, seg=None, n=1, end=False):

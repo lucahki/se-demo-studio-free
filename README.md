@@ -90,7 +90,7 @@ nothing:
 
 | Part | Original | Here |
 |---|---|---|
-| Narration voice | OpenRouter voice models | Kokoro v1.0 on your Mac by default, or Chatterbox on your Mac, or the OpenRouter voice if you have your own account (`lib/take.py`); you pick with `lib/audition.py` |
+| Narration voice | OpenRouter voice models | Kokoro v1.0 on your Mac by default, or Chatterbox on your Mac, or the OpenRouter voice if you have your own account (`lib/take.py`); you pick with `lib/audition.py`. English, Italian, Spanish, French, or Brazilian Portuguese (job.json `"language"`) |
 | Word timing | Whisper through OpenRouter | Whisper large-v3-turbo on your Mac (`lib/stt.py`, mlx-whisper) |
 | Music | Generated beds | None by default; optionally your own track |
 | Reviews and listening checks | OpenRouter models | Claude reads the frames itself; you do the listening |

@@ -1,13 +1,13 @@
 # Captions and player: out/<name>.srt and .vtt from the final word timings (words corrected to the script text),
 # and player.html with chapter chips and a clickable narration list (chapters come from script/segments.json).
 # usage: python3 lib/deliver.py <video filename inside out/>
-import base64, difflib, html, json, re, sys
-from common import job_config
+import base64, difflib, html, json, re, sys, unicodedata
+from common import job_config, language, LANGS
 from speech import paragraphs
 video = sys.argv[1]; base = video.rsplit('.', 1)[0]
 C = json.load(open('build/cues.json')); cfg = job_config(); paras = paragraphs()
 stoks = [w for p in paras for w in p.split()]; wtoks = [x['w'] for x in C['words']]
-n = lambda s: re.sub(r'[^a-z0-9]', '', s.lower())
+n = lambda s: re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode().lower())   # accents folded, as in speech.ntok
 sm = difflib.SequenceMatcher(a=[n(x) for x in stoks], b=[n(x) for x in wtoks], autojunk=False)
 timed = [None] * len(stoks)
 for op, a1, a2, b1, b2 in sm.get_opcodes():
@@ -43,6 +43,7 @@ chap_html = ''.join('<button class="chip" data-t="%.2f">%s<span>%s</span></butto
 list_html = ''.join('<li><button data-t="%.2f"><span class="t">%s</span><span class="b"><em>%s</em>%s</span></button></li>' % (t, mm(t), html.escape(c), html.escape(p)) for t, c, p in items)
 page = (open('lib/player_template.html').read().replace('{{TITLE}}', html.escape(cfg.get('title', 'Demo')))
         .replace('{{DISCLOSURE}}', html.escape(cfg.get('disclosure', ''))).replace('{{VIDEO}}', 'out/' + video)
+        .replace('{{LANG}}', language()).replace('{{LANG_NAME}}', LANGS[language()]['name'])
         # captions inline: Chrome will not load a .vtt file next to a page opened from disk
         .replace('{{VTT}}', 'data:text/vtt;base64,' + base64.b64encode('\n'.join(vtt).encode()).decode())
         .replace('{{CHAPTERS}}', chap_html).replace('{{LIST}}', list_html))

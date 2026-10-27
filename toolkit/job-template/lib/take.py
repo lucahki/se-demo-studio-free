@@ -9,9 +9,13 @@
 # (24 kHz mono) plus NAME.log. Kokoro, Chatterbox, and say read each paragraph on its own and join them with --gap
 # seconds of silence, so build_voice.py can cut at paragraph gaps; OpenRouter reads the whole text in one call.
 # Speed: Kokoro sets it natively; for Chatterbox and OpenRouter it is a pitch-preserving stretch of the take.
+# Language: job.json "language" (default "en"). Kokoro then needs a voice of that language (if_/im_ for Italian), and
+# Chatterbox uses Chatterbox Multilingual (scripts/setup-chatterbox.sh --multilingual). In a non-English script,
+# [en:word] reads one word with English pronunciation (Kokoro), e.g. "Usa [en:OAuth] per l'autenticazione"; captions
+# show the word without the brackets. Other engines read the plain word.
 import argparse, json, os, re, subprocess, tempfile, time, wave
-from common import (use_local_python, use_chatterbox_python, voice_config, run_ff, KOKORO, CHATTERBOX,
-                    JOB, check_budget, post, log_cost, generation_cost)
+from common import (use_local_python, use_chatterbox_python, voice_config, run_ff, KOKORO, CHATTERBOX, CHATTERBOX_MTL,
+                    JOB, LANGS, language, check_budget, post, log_cost, generation_cost)
 DEFAULTS = {'kokoro': {'name': 'am_michael', 'speed': 1.0},
             # the built-in voice with Resemble's default delivery, 6% slower: chosen by ear on 2026-10-21
             'chatterbox': {'name': 'builtin', 'speed': 0.94, 'seed': 1, 'exaggeration': 0.5, 'cfg_weight': 0.5},
@@ -34,6 +38,9 @@ pick = lambda arg, key: arg if arg is not None else S.get(key)
 voice, speed = pick(a.voice, 'name'), float(pick(a.speed, 'speed'))
 os.makedirs(a.dir, exist_ok=True)
 text = open(a.text).read()
+LANG = language()
+EN_WORD = re.compile(r'\[en:([^\]]+)\]')
+if engine != 'kokoro': text = EN_WORD.sub(r'\1', text)   # only Kokoro can switch pronunciation per word
 paras = [p.strip() for p in re.split(r'\n\s*\n', text) if p.strip()]
 SR = 24000; out = bytearray(); gap = b'\0\0' * int(a.gap * SR)
 info = {}
@@ -47,14 +54,21 @@ if engine == 'kokoro':
     k = Kokoro(*KOKORO)
     if voice not in k.get_voices():
         raise SystemExit('Unknown Kokoro voice %r. List them with: python3 lib/audition.py --list' % voice)
-    lang = 'en-gb' if voice.startswith('b') else 'en-us'
+    if voice[0] not in LANGS[LANG]['prefix']:
+        raise SystemExit('Kokoro voice %r does not speak %s (job.json "language": %r). Voices: python3 lib/audition.py --list'
+                         % (voice, LANGS[LANG]['name'], LANG))
+    lang = LANGS[LANG]['kokoro'] or ('en-gb' if voice.startswith('b') else 'en-us')
+    def phonemes(p):   # [en:word] parts in English, the rest in the job's language
+        return ' '.join(k.tokenizer.phonemize(s, 'en-us' if j % 2 else lang).strip() for j, s in enumerate(EN_WORD.split(p)) if s.strip())
     for i, p in enumerate(paras):
-        audio, sr = k.create(p, voice=voice, speed=speed, lang=lang)
+        if EN_WORD.search(p): audio, sr = k.create(phonemes(p), voice=voice, speed=speed, is_phonemes=True)
+        else: audio, sr = k.create(p, voice=voice, speed=speed, lang=lang)
         out += (np.clip(audio, -1, 1) * 32767).astype('<i2').tobytes() + (gap if i < len(paras) - 1 else b'')
 elif engine == 'chatterbox':
     use_chatterbox_python()
     import numpy as np, torch
     from chatterbox.tts import ChatterboxTTS
+    from chatterbox.mtl_tts import ChatterboxMultilingualTTS
     seed, exa, cfg = int(pick(a.seed, 'seed')), float(pick(a.exaggeration, 'exaggeration')), float(pick(a.cfg, 'cfg_weight'))
     # "builtin" is the voice that ships with the model (MIT). Anything else is a reference clip in the job folder to
     # clone, which the owner must have the rights to use (about 10 s of clean speech).
@@ -62,10 +76,13 @@ elif engine == 'chatterbox':
     if ref and not os.path.exists(ref):
         raise SystemExit('Chatterbox reference clip %s not found. Use "builtin" or a path inside the job folder.' % ref)
     device = 'mps' if torch.backends.mps.is_available() else 'cpu'
-    m = ChatterboxTTS.from_local(CHATTERBOX, device)
+    if LANG == 'en': m = ChatterboxTTS.from_local(CHATTERBOX, device)
+    elif not os.path.exists(os.path.join(CHATTERBOX_MTL, 't3_mtl23ls_v2.safetensors')):
+        raise SystemExit('Chatterbox Multilingual is not installed. Run scripts/setup-chatterbox.sh --multilingual (3.2 GB, once).')
+    else: m = ChatterboxMultilingualTTS.from_local(CHATTERBOX_MTL, device)
     if m.sr != SR:
         raise SystemExit('Chatterbox returned %d Hz audio; this script expects %d.' % (m.sr, SR))
-    def chunks(p, most=90):
+    def chunks(p, most=90 if LANG == 'en' else 60):
         # Chatterbox stops after about 40 s of speech per call, so split a long paragraph at sentence ends.
         if len(p.split()) <= most:
             return [p]
@@ -84,10 +101,11 @@ elif engine == 'chatterbox':
             # run (tested 2026-10-21), so keep the take the owner approved; redo a paragraph with build_voice.py segment=T2.
             torch.manual_seed(seed)
             print('chatterbox: paragraph %d/%d%s' % (i + 1, len(paras), ' part %d/%d' % (j + 1, len(parts)) if len(parts) > 1 else ''), flush=True)
-            w = m.generate(c, audio_prompt_path=ref, exaggeration=exa, cfg_weight=cfg).squeeze(0).cpu().numpy()
+            kw = {} if LANG == 'en' else {'language_id': LANG}
+            w = m.generate(c, audio_prompt_path=ref, exaggeration=exa, cfg_weight=cfg, **kw).squeeze(0).cpu().numpy()
             out += (np.clip(w, -1, 1) * 32767).astype('<i2').tobytes() + (small if j < len(parts) - 1 else b'')
         out += gap if i < len(paras) - 1 else b''
-    info.update(device=device, seed=seed, exaggeration=exa, cfg_weight=cfg, reference=voice,
+    info.update(device=device, language=LANG, seed=seed, exaggeration=exa, cfg_weight=cfg, reference=voice,
                 license='Chatterbox MIT; every take carries an inaudible Perth watermark marking it as AI speech')
 elif engine == 'openrouter':
     use_local_python()   # for its certificate handling (truststore); no local model is used

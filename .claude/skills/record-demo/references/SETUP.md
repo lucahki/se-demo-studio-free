@@ -69,8 +69,14 @@ Every model file is checked against its size and SHA-256. Licenses: the Chatterb
 (Resemble AI). Its packages are permissive except pykakasi (GPL-3.0, Japanese text only) and soxr (LGPL-2.1),
 fine to run for the same reason as phonemizer above. It runs on the Mac GPU: about 7 times slower than real time
 on an M1 Pro with 16 GB. Every take carries Resemble's inaudible Perth watermark, which marks it as AI speech.
-If "Chatterbox (local) BROKEN": delete `toolkit/.venv-chatterbox` and rerun. To remove it: delete
-`toolkit/.venv-chatterbox` and `toolkit/models/chatterbox`.
+The script rebuilds `toolkit/.venv-chatterbox` by itself when its Python no longer starts (on 2026-10-27 it had been
+made from a Python that was later deleted). If "Chatterbox (local) BROKEN" remains: delete `toolkit/.venv-chatterbox`
+and rerun. To remove it: delete `toolkit/.venv-chatterbox` and `toolkit/models/chatterbox`.
+
+**Other languages.** `scripts/setup-chatterbox.sh --multilingual` also fetches Chatterbox Multilingual (same licence
+and Hugging Face commit, 3.2 GB more, `toolkit/models/chatterbox-mtl`); once it is there, every rerun checks it.
+`lib/take.py` uses it when job.json `"language"` is not English. Kokoro and Whisper need nothing extra for Italian,
+Spanish, French, or Portuguese. Remove it with `rm -rf toolkit/models/chatterbox-mtl`.
 
 ## OpenRouter voice (optional, paid)
 

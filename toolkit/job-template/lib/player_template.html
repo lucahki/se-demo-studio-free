@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="{{LANG}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{TITLE}}</title>
 <link href="build/fonts/fonts.css" rel="stylesheet">
 <style>
@@ -22,7 +22,7 @@ li button:hover,li button.on{border-color:var(--acc)}
 </style></head><body><main>
 <h1>{{TITLE}}</h1>
 <p class="sub">{{DISCLOSURE}} Click a chapter or a line to jump to it.</p>
-<video id="v" src="{{VIDEO}}" controls playsinline preload="metadata"><track kind="captions" srclang="en" label="English" src="{{VTT}}"></video>
+<video id="v" src="{{VIDEO}}" controls playsinline preload="metadata"><track kind="captions" srclang="{{LANG}}" label="{{LANG_NAME}}" src="{{VTT}}"></video>
 <div class="chips" id="c">{{CHAPTERS}}</div>
 <ol id="l">{{LIST}}</ol>
 <p class="note">Script, sources, claim table, state-change log, and review findings: README.md and script/SCRIPT.md.</p>

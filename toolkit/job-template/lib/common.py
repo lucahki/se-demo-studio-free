@@ -26,12 +26,29 @@ WHISPER = os.path.join(MODELS, 'whisper-large-v3-turbo')
 # Chatterbox needs PyTorch, so it has its own Python (made by scripts/setup-chatterbox.sh, only when a job picks it).
 CHATTERBOX_VENV = os.path.join(STUDIO, 'toolkit', '.venv-chatterbox')
 CHATTERBOX = os.path.join(MODELS, 'chatterbox')
+# Chatterbox Multilingual, for narration that is not English (scripts/setup-chatterbox.sh --multilingual)
+CHATTERBOX_MTL = os.path.join(MODELS, 'chatterbox-mtl')
+# Narration languages (job.json "language", default "en"). Kokoro voice names start with the language's letter
+# (af_/bm_ English, if_/im_ Italian, ef_/em_ Spanish, ff_ French, pf_/pm_ Brazilian Portuguese); "kokoro" is the
+# phonemizer code (None: English, chosen per voice); Whisper and Chatterbox Multilingual take the two-letter code.
+LANGS = {'en': {'name': 'English', 'kokoro': None, 'prefix': 'ab'},
+         'it': {'name': 'Italiano', 'kokoro': 'it', 'prefix': 'i'},
+         'es': {'name': 'Español', 'kokoro': 'es', 'prefix': 'e'},
+         'fr': {'name': 'Français', 'kokoro': 'fr-fr', 'prefix': 'f'},
+         'pt': {'name': 'Português', 'kokoro': 'pt-br', 'prefix': 'p'}}
 COSTS = os.path.join(JOB, 'logs', 'costs.jsonl')
 API = 'https://openrouter.ai/api/v1'
 
 def job_config():
     p = os.path.join(JOB, 'job.json')
     return json.load(open(p)) if os.path.exists(p) else {}
+
+def language():
+    # job.json "language": the narration and caption language, a key of LANGS; jobs without it are English
+    code = str(job_config().get('language') or 'en').lower()
+    if code not in LANGS:
+        sys.exit('job.json "language" %r is not supported. Use one of: %s' % (code, ', '.join(LANGS)))
+    return code
 
 def voice_config():
     # job.json "voice"; jobs made before engines existed have no "engine" and mean Kokoro.

@@ -71,6 +71,10 @@ for a yes.
     - **OpenRouter**: paid from their own OpenRouter account (about $0.08 for a 5-minute script), and the script
       text leaves their Mac. Only for someone who already has, or wants, an account and a key.
     They pick the actual voice by ear in a short audition before the build (SKILL.md Step 4).
+    Language: English by default; Italian, Spanish, French, or Brazilian Portuguese are supported (job.json
+    `"language"`). In another language, Kokoro has one or two voices per language (Italian `im_nicola`, `if_sara`, grade
+    C), Chatterbox needs its multilingual model (3.2 GB more), and English product names get respellings that they
+    confirm by ear. A finished job in another language follows references/LOCALIZE.md instead of a new recording.
 12. **Time and music.** The time limit (default 4 hours) and when they need it by. Music: none by default; if
     they want some, they supply a track they have the rights to.
 

@@ -7,6 +7,7 @@
   "app_url": "https://example.com/",
   "app_match": "example.com",
   "theme": "light",
+  "language": "en",
   "respell": {},
   "voice": {"engine": "kokoro", "name": "am_michael", "speed": 1.0},
   "music": {"file": "", "level_db": -9, "windows": [["intro", "plan"], ["close", null]]}

@@ -1,7 +1,9 @@
 # Shared reading of the talk track. script/speech.txt holds one paragraph per segment, separated by blank lines,
 # in the same order as script/segments.json. Respellings (spoken form -> written form) live in job.json "respell",
 # e.g. {"S D WAN": "SD-WAN", "Thousand Eyes": "ThousandEyes"}; captions and alignment use the written form.
-import json, os, re
+# [en:word] (one word read with English pronunciation, lib/take.py) is written as the plain word.
+# Words are matched with accents folded (è -> e), so accented words in any language align.
+import json, os, re, unicodedata
 from common import JOB, job_config
 
 def respell():
@@ -12,6 +14,7 @@ def paragraphs(written=True):
     if written:
         for spoken, w in respell().items():
             txt = txt.replace(spoken, w)
+        txt = re.sub(r'\[en:([^\]]+)\]', r'\1', txt)
     return [p.strip() for p in re.split(r'\n\s*\n', txt) if p.strip()]
 
 def segments():
@@ -22,7 +25,7 @@ def segments():
     return d, segs
 
 def ntok(s):
-    return re.sub(r'[^a-z0-9]', '', s.lower())
+    return re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode().lower())
 
 def tokens(text):
     return [t for t in (ntok(p) for p in re.split(r'[\s\-]+', text)) if t]

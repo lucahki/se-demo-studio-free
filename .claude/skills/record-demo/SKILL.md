@@ -59,6 +59,12 @@ references/SETUP.md. Tell them after: the video is `jobs/<slug>/out/<slug>_v1.mp
 is `jobs/<slug>/player.html` (offer `open jobs/<slug>/player.html`); that it cost nothing; and that a real demo starts with
 the interview and a voice audition, needs a demo environment they sign in to, and takes a few hours (a recent one took about 4). Offer to start it.
 
+## Version in another language
+
+When the person wants a finished job in another language ("an Italian version of my last video"), reuse its
+screen capture: follow references/LOCALIZE.md. No interview, research, or recording; the approval points are the
+translated talk track, the voice by ear, and the stills they name. Never change the original job.
+
 ## Step 1: interview
 
 Follow references/INTERVIEW.md. Start by asking for the ask in their own words, then the rounds of questions.
@@ -156,6 +162,8 @@ decision back; check the rough cut; give the final report.
   listening review happens here unless the person does it.
 
 ## References
+
+- references/LOCALIZE.md: a finished job in another language, reusing its capture.
 
 - references/INTERVIEW.md: the questions and how to ask them.
 - references/SETUP.md: requirements, the local voice and Whisper, model and effort, disk.

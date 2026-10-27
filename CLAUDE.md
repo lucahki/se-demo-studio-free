@@ -3,8 +3,9 @@
 This folder is a studio for recording narrated virtual SE product demos from a live, signed-in product.
 
 - When someone asks to record, make, or build a demo (for example "help me record a demo"), to come up with a
-  demo idea or scenario for a video, or to continue a job in `jobs/`, use the `record-demo` skill. It interviews
-  them, sets up the job, launches the builder, and stops for their approval at the storyboard.
+  demo idea or scenario for a video, to continue a job in `jobs/`, or to make a finished job in another language,
+  use the `record-demo` skill. It interviews them, sets up the job, launches the builder, and stops for their
+  approval at the storyboard.
 - Start sessions from this folder: the studio's agents in `.claude/agents` only register here.
 - Run on Opus 5.5 at high effort (`claude-opus-5-5`, set in `.claude/settings.json`). If the session is on
   another model or effort, ask the person to run `/model claude-opus-5-5` and `/effort high` before continuing.

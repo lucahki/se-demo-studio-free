@@ -96,6 +96,10 @@ mark('owner_done');
 
 - `script/speech.txt`: the exact text for the voice model, one paragraph per segment, blank line between.
   Respellings go here ("S D WAN"), never in style instructions.
+- Many respellings, or a language other than English: write the approved text in `script/written.txt`, the
+  respellings in job.json `"respell"` (spoken -> written), and run `python3 lib/spoken.py`; it writes
+  `script/speech.txt` and stops if the captions would not show the approved wording. `[en:word]` in the spoken text
+  reads one word with English pronunciation (Kokoro). Versions in another language: references/LOCALIZE.md.
 - `script/segments.json`: one entry per paragraph, same order: `name` (used in the edit), `gap` (seconds of
   silence after it, room for typing, loading, reading), `chapter` (player chapter label). Also `intro_seconds`
   (silence before the first word, under the title) and `tail_seconds` (after the last word).
@@ -104,13 +108,14 @@ mark('owner_done');
 
 | Step | Command |
 |---|---|
-| Install Chatterbox (once, only if picked) | `scripts/setup-chatterbox.sh` (root; about 3.5 GB) |
+| Narration language | job.json `"language"` (`en` default; `it`, `es`, `fr`, `pt`). take.py, audition.py, stt.py, captions, and the player follow it |
+| Install Chatterbox (once, only if picked) | `scripts/setup-chatterbox.sh` (root; about 3.5 GB); add `--multilingual` for another language (3.2 GB more) |
 | Check the OpenRouter key (only if picked) | `scripts/check-openrouter.sh` (root; prints usage and limit, never the key) |
-| Kokoro voices and grades | `python3 lib/audition.py --list` |
+| Kokoro voices and grades | `python3 lib/audition.py --list` (the job's language) |
 | Audition (the owner picks by ear) | Kokoro: `python3 lib/audition.py [voice ...] [--text FILE] [--speed 1.0]`, then `afplay audio/audition/A_<voice>.wav`. Chatterbox: `python3 lib/audition.py --engine chatterbox [--speed 0.94]`. OpenRouter (paid): `python3 lib/audition.py --engine openrouter [Iapetus Charon ...]`. Each prints its play commands |
 | Full take | `python3 lib/take.py T1` (engine, voice, and speed from job.json), or override: `python3 lib/take.py T2 af_heart --speed 0.95` |
 | Redo some paragraphs | put just those paragraphs in a file and `python3 lib/take.py T3 --text FILE`; `check_take.py T3` then lists the other paragraphs as unaligned, which is expected; join with `build_voice.py T1 segment=T3` |
-| Word timestamps | `python3 lib/stt.py audio/takes/T1.wav` (local Whisper large-v3-turbo) |
+| Word timestamps | `python3 lib/stt.py audio/takes/T1.wav` (local Whisper large-v3-turbo, in the job's language; `--language it` overrides) |
 | Wording check vs script | `python3 lib/check_take.py T1 [T2 ...]` |
 | Assemble narration | `python3 lib/build_voice.py T1 [segment=T2 ...]` -> `audio/voice.wav`, `build/cues.json`; it ends with an edge check, and any `EDGE MISMATCH` means a paragraph lost its first or last word (L55), except when a number word was transcribed as digits ("three" as "3"): check those by ear. Decide a join by its `JOIN` numbers (L56). Missing or misread words show in `check_take.py`; pronunciation and artifacts are for the owner's listen (`review/LISTEN.md`) |
 

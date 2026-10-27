@@ -217,3 +217,24 @@ new `scripts/setup-chatterbox.sh` and `toolkit/requirements-chatterbox.txt`, res
 and `.env.example` (voice only), `scripts/setup.sh` (an optional Chatterbox status line), `.gitignore`,
 `.claude/settings.json` (allows the two scripts), `CLAUDE.md`, the skill and its references, and the README.
 Word timing, reviews, music, and everything else stay local.
+
+## 9. Later change: narration in other languages (2026-10-27)
+
+After the Italian version of a finished demo, the studio can narrate and caption
+in English, Italian, Spanish, French, or Brazilian Portuguese. job.json `"language"` picks it (default `"en"`), so
+English jobs are unchanged. Everything still runs on the Mac.
+
+| Part | Change | Tested |
+|---|---|---|
+| Kokoro (`lib/take.py`) | Reads in the job's language with a voice of that language (Italian `im_nicola`, `if_sara`); refuses a voice that does not speak it. `[en:word]` reads one word with English pronunciation | English: a take, its Whisper words, alignment, narration, cues, captions, player page, and voice list byte-identical to the scripts before the change. Italian: reproduces the Italian job's final take sample for sample |
+| Chatterbox | Chatterbox Multilingual (Resemble AI, MIT, same Hugging Face commit) for other languages: `scripts/setup-chatterbox.sh --multilingual`, 3.2 GB, size and SHA-256 checked | An Italian line, transcribed correctly; English Chatterbox also rerun |
+| Setup | `setup-chatterbox.sh` rebuilds `toolkit/.venv-chatterbox` when its Python no longer starts. It had been made from a Python under `voice-test/` that was later deleted, so Chatterbox could not start; the script found and rebuilt it | Rerun ends with "CHATTERBOX OK" |
+| Whisper (`lib/stt.py`) | Transcribes in the job's language (`--language` overrides) | Italian takes |
+| Text matching (`speech.py`, `timeline.py`, `deliver.py`) | Accents folded (è -> e) instead of dropped; `[en:word]` written as the plain word | Italian captions show the approved wording, no respellings |
+| New `lib/spoken.py` | Builds `script/speech.txt` from the approved `script/written.txt` and job.json `"respell"`, and stops if the captions would not show the approved wording | Rebuilt the Italian job's spoken text; it also caught one "Webex" before a full stop that the job's own script had left unrespelled |
+| `lib/audition.py`, player | Voice list, default voices, and sample in the job's language; player page and caption track labelled with it | Italian list and player |
+
+Files: `toolkit/job-template/lib/` (`common.py`, `take.py`, `stt.py`, `speech.py`, `timeline.py`, `deliver.py`,
+`audition.py`, `player_template.html`, new `spoken.py`), `toolkit/job-template/job.json` (`"language"`),
+`scripts/setup-chatterbox.sh`, `CLAUDE.md`, the README, the skill, and its references (new `LOCALIZE.md`: making a
+finished job in another language from its own screen capture, with the Italian findings).
