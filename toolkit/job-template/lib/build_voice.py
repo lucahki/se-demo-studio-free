@@ -23,6 +23,16 @@ def load(t):
 def rms(seg):   # active-speech level: mean power of the loudest 60% of 20 ms frames
     n = int(.02 * SR); fr = [sum(v * v for v in seg[k:k + n]) / n for k in range(0, max(1, len(seg) - n), n)]
     fr = sorted(fr)[int(len(fr) * .4):] or [1]; return math.sqrt(sum(fr) / len(fr)) or 1
+def gaps_of(pcm):   # take.py joins paragraphs with 0.7 s of digital silence: find those runs (|v| <= 2 for 0.68 s or more)
+    out, run0 = [], None
+    for k in range(0, len(pcm), 48):
+        q = max(abs(v) for v in pcm[k:k + 48]) <= 2
+        if q and run0 is None: run0 = k
+        if not q and run0 is not None:
+            if k - run0 >= .68 * SR: out.append((run0 / SR, k / SR))   # the joins are 0.70 s; a paragraph can hold a 0.57 s pause
+            run0 = None
+    return out
+GAPS = {}
 parts = []
 for i, s in enumerate(SEGS):
     t = over.get(s['name'], base); pcm, words, spans = load(t); sp = spans[i]
@@ -32,15 +42,27 @@ for i, s in enumerate(SEGS):
     next_start = words[j1 + 1]['start'] if j1 + 1 < len(words) else len(pcm) / SR
     cut0 = max(prev_end + .02, st - .12) if j0 > 0 else max(0, st - .05)
     cut1 = min(en + .28, (en + next_start) / 2 + .08, next_start - .02) if j1 + 1 < len(words) else min(len(pcm) / SR, en + .8)
+    # cut at the take's own paragraph gaps when they can be found: the segment then holds the whole paragraph with its
+    # natural decay (Whisper word ends run early, and a cut there clips the tail: heard as clipped words on 2026-10-20).
+    # OpenRouter reads the script in one call, without those gaps, so its takes keep the word-based cuts.
+    if t not in GAPS: GAPS[t] = gaps_of(pcm)
+    g = GAPS[t]
+    if len(g) == len(SEGS) - 1:
+        cut0 = g[i - 1][1] if i > 0 else 0.0
+        cut1 = g[i][0] if i < len(g) else len(pcm) / SR
+    elif i == 0: print('note: %s has %d silent gaps for %d paragraphs; using word-based cuts' % (t, len(g), len(SEGS)))
     seg = pcm[int(cut0 * SR):int(cut1 * SR)]
-    parts.append(dict(s=s, take=t, cut0=cut0, cut1=cut1, seg=seg, words=words[j0:j1 + 1], rms=rms(seg)))
+    parts.append(dict(s=s, take=t, cut0=cut0, cut1=cut1, seg=seg, words=words[j0:j1 + 1], rms=rms(seg), gapcut=len(g) == len(SEGS) - 1))
 baseR = [p['rms'] for p in parts if p['take'] == base]; baseR = sum(baseR) / max(1, len(baseR))
 out = array.array('h', [0] * int(INTRO * SR)); t = INTRO
 cues = {'base_take': base, 'overrides': over, 'segments': [], 'words': []}
 for p in parts:
     g = baseR / p['rms'] if p['take'] != base else 1.0
-    seg = array.array('h', [int(max(-32767, min(32767, v * g))) for v in p['seg']]); n = int(.015 * SR)
-    for j in range(min(n, len(seg) // 2)): seg[j] = int(seg[j] * j / n); seg[-1 - j] = int(seg[-1 - j] * j / n)
+    seg = array.array('h', [int(max(-32767, min(32767, v * g))) for v in p['seg']]); n_in, n_out = int(.010 * SR), int(.030 * SR)
+    for j in range(min(n_in, len(seg) // 2)): seg[j] = int(seg[j] * j / n_in)          # 10 ms fade-in
+    for j in range(min(n_out, len(seg) // 2)): seg[-1 - j] = int(seg[-1 - j] * j / n_out)  # 30 ms fade-out
+    if p.get('gapcut'):   # keep the old spacing around a gap-cut paragraph as pure digital silence (no clipped audio)
+        seg = array.array('h', [0] * int(.12 * SR)) + seg + array.array('h', [0] * int(.28 * SR)); p['cut0'] -= .12
     dur = len(seg) / SR; s = p['s']
     cues['segments'].append({'name': s['name'], 'chapter': s.get('chapter', ''), 'take': p['take'], 'gain': round(g, 3),
                              't0': round(t, 3), 't1': round(t + dur, 3)})

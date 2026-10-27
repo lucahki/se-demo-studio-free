@@ -51,8 +51,10 @@ checksum (`md5 -q`) at the start and the end, and say both in the final report.
   phonemes and the captions show the plain word.
 - Put each respelling in job.json `"respell"` (spoken -> written) and run `python3 lib/spoken.py`: it writes
   `script/speech.txt` from `script/written.txt` and stops if the captions would not show the approved wording.
-- Make 30 s samples of the first slide's paragraph over the music (the original job's levels) in each candidate
-  voice, transcribe each with Whisper in the language (`lib/stt.py` uses job.json `"language"`), and tell the
+- Make 30 s samples of the first slide's paragraph over the music in each candidate voice: Kokoro reads the whole
+  script in about a minute, so make a full take per voice, assemble it (`build_voice.py`), and render the first 30 s
+  with `python3 lib/mix.py review/samples/<voice>.wav --from 0 --to 30` (the job's music settings). Transcribe each
+  with Whisper in the language (`lib/stt.py` uses job.json `"language"`), and tell the
   person what Whisper heard before they listen. They choose by ear.
 
 ## 4. Fit, check, and listen

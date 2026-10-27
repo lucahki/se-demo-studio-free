@@ -117,6 +117,7 @@ mark('owner_done');
 | Redo some paragraphs | put just those paragraphs in a file and `python3 lib/take.py T3 --text FILE`; `check_take.py T3` then lists the other paragraphs as unaligned, which is expected; join with `build_voice.py T1 segment=T3` |
 | Word timestamps | `python3 lib/stt.py audio/takes/T1.wav` (local Whisper large-v3-turbo, in the job's language; `--language it` overrides) |
 | Wording check vs script | `python3 lib/check_take.py T1 [T2 ...]` |
+| Voice joins | `python3 lib/join_scan.py` after build_voice: every paragraph must start and end in silence or a fade (below -50 dB), with nothing in the gaps. build_voice cuts each paragraph at the take's own 0.7 s silences, so its natural decay is kept (a word-based cut clipped word endings on 2026-10-20); OpenRouter takes have no such silences and keep word-based cuts |
 | Assemble narration | `python3 lib/build_voice.py T1 [segment=T2 ...]` -> `audio/voice.wav`, `build/cues.json`; it ends with an edge check, and any `EDGE MISMATCH` means a paragraph lost its first or last word (L55), except when a number word was transcribed as digits ("three" as "3"): check those by ear. Decide a join by its `JOIN` numbers (L56). Missing or misread words show in `check_take.py`; pronunciation and artifacts are for the owner's listen (`review/LISTEN.md`) |
 
 job.json `"voice"` by engine (a job without `"engine"` is Kokoro):
@@ -173,11 +174,17 @@ in timeline seconds), not to word times: word-keyed moves drift onto the wrong c
 | Click and key sounds | `python3 lib/sfx.py` (once) |
 | Sound cue sheet | `python3 lib/sfx_events.py` |
 | Music (optional, off by default) | No generator. Put a track the owner has the rights to in `audio/music/` and set job.json `music` |
-| Mix and master | `python3 lib/mix.py out/mix.wav` (-16 LUFS; music windows from job.json, ducked under voice) |
+| Music bed (run by mix.py when needed) | `python3 lib/music_bed.py` -> `audio/music/bed.wav`, `bed.json`: the track fitted to the video so its own ending lands at the end (no jump, one skip forward, or one or two bar-aligned jumps back, crossfaded over a bar). It stops with a message when a track cannot be fitted |
+| Mix and master | `python3 lib/mix.py out/mix.wav` (-16 LUFS, -1.5 dBTP); prints and saves `build/mix_levels.json` (voice-to-music difference under speech, between phrases, in the intro). `--from S --to S` renders an excerpt, e.g. a 30 s sample |
 
-job.json `music`: `{"file": "audio/music/track.mp3", "level_db": -9, "windows": [["intro", "plan"], ["close", null]]}`.
-Each window runs from the first segment's start to the second segment's end (`null` = to the end). An empty
-`file` (the default) means no music.
+job.json `music` (defaults): `{"file": "", "level_db": -20, "duck_db": -6, "intro_boost_db": 11}`. An empty `file`
+means no music. With a track, the music runs under the whole video: `level_db` sets the bed against the voice's
+measured loudness, `duck_db` lowers it further while the SE speaks (held through pauses under 1.2 s, so it does not
+pump), `intro_boost_db` makes it louder while it plays alone before the first word and eases it down over 0.8 s just
+before it, and it fades out after the last word (`end_slide_seconds` to set the fade). For a music lead-in, set
+`script/segments.json` `intro_seconds` so the first word lands on `bed.json` `beat_near_3s` (on a beat; check
+`build/cues.json` `words[0].t` after build_voice). Measured on the 2026-10-20 demo, approved by ear: music 26 dB under the
+voice under speech, 20 dB between phrases, 12.6 dB in the intro.
 
 ## 6. Render and deliver
 

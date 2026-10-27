@@ -51,9 +51,10 @@ at the rough cut, because Claude cannot hear audio.
 1. Pick a track you have the rights to use (licensed, royalty-free, or your own).
 2. Put it in the job's `audio/music/` folder.
 3. Set `music` in the job's `job.json`, for example:
-   `{"file": "audio/music/track.mp3", "level_db": -9, "windows": [["intro", "plan"], ["close", null]]}`.
-   Each window runs from the start of the first segment to the end of the second (`null` means to the end of
-   the video). The track restarts in each window and is ducked under the voice.
+   `{"file": "audio/music/track.mp3", "level_db": -20, "duck_db": -6, "intro_boost_db": 11}`.
+   The track runs under the whole video, fitted so its own ending lands at the end, about 20 dB under the voice and
+   lower while the SE speaks, louder in the intro (section 10). Jobs made before 2026-10-27 keep their own `mix.py`
+   and its `"windows"` setting.
 4. Run `python3 lib/mix.py out/mix.wav` as usual.
 
 An empty `"file"` (the default) means no music. If the file path is wrong, `mix.py` now stops with a clear
@@ -238,3 +239,18 @@ Files: `toolkit/job-template/lib/` (`common.py`, `take.py`, `stt.py`, `speech.py
 `audition.py`, `player_template.html`, new `spoken.py`), `toolkit/job-template/job.json` (`"language"`),
 `scripts/setup-chatterbox.sh`, `CLAUDE.md`, the README, the skill, and its references (new `LOCALIZE.md`: making a
 finished job in another language from its own screen capture, with the Italian findings).
+
+## 10. Later change: the voice joins and music mix from the 2026-10-20 demo (2026-10-27)
+
+That demo fixed two things in its own copies of the scripts, after
+listening by ear. They are now in the template, so new jobs get them. Jobs made earlier keep their own scripts.
+
+| Part | Change | Tested |
+|---|---|---|
+| Voice joins (`lib/build_voice.py`) | Each paragraph is cut at the take's own 0.7 s silences instead of at Whisper's word ends, which run early and clipped word endings; 10 ms fade-in, 30 ms fade-out. Falls back to word-based cuts when a take has no such silences (OpenRouter) | The demo's final take rebuilt: narration and cues byte-identical to the demo's; a new Kokoro take: 0 joins needing a look |
+| New `lib/join_scan.py` | Checks that every join starts and ends in silence or a fade, with nothing in the gaps | Both takes above |
+| Music (`lib/mix.py`) | Replaces the music "windows": the track runs under the whole video at a level set from the voice's measured loudness (`level_db` -20), lowered while the SE speaks (`duck_db` -6, held through pauses under 1.2 s), louder in the music-only intro and easing down before the first word (`intro_boost_db` 11), fading out after the last word; master -16 LUFS with a -1.5 dBTP limiter; measured levels in `build/mix_levels.json`; `--from/--to` excerpts for samples | The demo's mix rebuilt from its voice and sounds: byte-identical to the demo's `out/mix.wav`; no-music and short-video mixes |
+| New `lib/music_bed.py` | Fits the track to the video so its own ending lands at the end: plays as is within 8 bars, else one skip forward, or one or two bar-aligned jumps back, crossfaded over one bar where the music matches best. Generalized from the demo's copy (one track, always two jumps) | The demo's and its Italian version's beds byte-identical; 55, 90, 100, 120, and 180 s videos fitted within 0.7 s; a 500 s video stops with a message |
+
+Files: `toolkit/job-template/lib/` (`build_voice.py`, `mix.py`, new `music_bed.py` and `join_scan.py`),
+`toolkit/job-template/job.json` (`music` fields), the test run's `job-settings.json`, PIPELINE.md, MODELS.md.

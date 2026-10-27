@@ -16,7 +16,7 @@ the OpenRouter voice when the owner picks it.
 | Voice grades | from the Kokoro voice list | American women: `af_heart` A, `af_bella` A-, `af_nicole` B-. American men: `am_michael`, `am_fenrir`, `am_puck` C+. British: `bf_emma` B-, `bm_george` and `bm_fable` C. `python3 lib/audition.py --list` shows all. |
 | Word timestamps | Whisper large-v3-turbo through mlx-whisper (`lib/stt.py`, in job.json `"language"`) | Mishears some words (it wrote "SD-WAN" as "SDWAN", which the alignment accepts); list doubtful lines for the owner's listen before rewording. |
 | Listening | the owner | Claude cannot hear audio. Wording is checked against Whisper's text by `check_take.py`; pronunciation and artifacts are checked by the owner from `review/LISTEN.md`. Joins are judged by `build_voice.py`'s JOIN numbers (L56). |
-| Music | none, or the owner's own track | No music generator. A track the owner has the rights to goes in `audio/music/` and job.json `music`. |
+| Music | none, or the owner's own track | No music generator. A track the owner has the rights to goes in `audio/music/` and job.json `music`; `lib/music_bed.py` fits it to the video and `lib/mix.py` sets its level from the measured voice loudness (PIPELINE.md step 5). |
 | Frame and fact review | Claude | Round 1 by the builder, round 2 by a fresh subagent that has not seen the script being written, plus the `claim-checker` agent. |
 | Connective art | none | Title cards and backgrounds are built in HTML and CSS in `build/story.js`; never imitate product UI. |
 | Draft voice only | macOS `say` (`lib/take.py ... --engine say`) | Apple licenses these voices for personal, non-commercial use, so never in a shared video. |
