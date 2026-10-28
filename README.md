@@ -1,4 +1,4 @@
-# Demo studio for Claude Code
+# Demo studio for Claude Code: free and local
 
 Records a narrated "virtual SE" demo video of a Cisco product from a live, signed-in session in Chrome: real
 product footage, an AI voice walking through one story, captions, and a player page. You describe what you want;
@@ -7,13 +7,18 @@ and talk track for approval, then records, narrates, edits, and renders on its o
 
 Built from four real jobs, including a 5-minute Cisco Cloud Control demo (see `examples/`).
 
-Based on [se-demo-studio](https://github.com/achobgood/se-demo-studio) by Adam Hobgood, under the Apache License
-2.0 (`LICENSE`). This version runs free and on your Mac: see "Free, local mode" below for what changed.
+Everything except Claude runs on your Mac and costs nothing beyond your Claude plan: the voice, word timing, music,
+and frame reviews need no paid service or API key. Narration and captions in English, Italian, Spanish, French, or
+Brazilian Portuguese.
+
+This studio started from [se-demo-studio](https://github.com/achobgood/se-demo-studio) by Adam Hobgood (Apache
+License 2.0) and is now developed separately. What changed is under "Free, local mode" below and in
+`FREE-LOCAL-CHANGES.md`.
 
 ## Start
 
 1. In NodeTerm or Terminal, get the studio and open its folder:
-   `git clone https://github.com/achobgood/se-demo-studio.git && cd se-demo-studio`. Always start Claude from
+   `git clone https://github.com/lucahki/se-demo-studio-free.git && cd se-demo-studio-free`. Always start Claude from
    this folder; the studio's agents only load here. For updates, see Updates below.
 2. Run `claude`. The first time, accept the prompt to trust this folder (the studio's pre-approved commands only
    load in a trusted folder; they are listed under "allow" in `.claude/settings.json`). Then say **"help me
@@ -24,15 +29,15 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
 
 ## Updates
 
-- This copy runs on the git branch `free-local` (see "Free, local mode" below). To bring in the newest version
-  of the original studio, run `git fetch origin`, then `git merge origin/main`, in the studio folder. If git
-  says there is a conflict, both versions changed the same lines; ask Claude to help you choose.
+- To get the newest version, run `git pull` in the studio folder. If git says there is a conflict, you changed
+  the same lines yourself; ask Claude to help you choose.
 - Claude runs setup each time you start a new demo, and setup installs anything the new version needs.
-- To see your version, run `cat VERSION`, or read the first line setup prints. What changed is in `CHANGELOG.md`.
+- Changes made in this studio are in `FREE-LOCAL-CHANGES.md`. `CHANGELOG.md` lists the original studio's versions
+  up to the one this studio builds on (`VERSION`, also the first line setup prints).
 
 ## What you need
 
-- A Mac with Google Chrome, Node.js 20 or newer, and Python 3. `scripts/setup.sh` checks all of it and installs
+- A Mac with Apple silicon (M1 or newer), Google Chrome, Node.js 20 or newer, and Python 3. `scripts/setup.sh` checks all of it and installs
   the capture and render tools into `toolkit/` (about 400 MB) and the local voice and Whisper (about 2.6 GB).
 - Claude Code (tested on version 2.1.300; `claude update` to upgrade) with access to Opus 5.5. The studio runs
   every session at `claude-opus-5-5`, high effort. A build runs for 1 to 2 hours and uses your Claude plan.
@@ -88,8 +93,7 @@ Nothing here is brand, legal, or SME reviewed. Treat the output as an internal d
 
 ## Free, local mode
 
-This copy (git branch `free-local`) changes the original studio so it needs no OpenRouter account and spends
-nothing:
+Compared with the original studio, this one needs no OpenRouter account and spends nothing:
 
 | Part | Original | Here |
 |---|---|---|
@@ -116,10 +120,9 @@ The interview asks which voice engine to use, then you pick the voice by ear:
 | Chatterbox | Free, on your Mac | About 30 minutes per full take of a 4-minute script | One built-in voice, read 6% slower by default. Installed the first time a job picks it (`scripts/setup-chatterbox.sh`, about 3.5 GB). MIT license; every take carries an inaudible AI watermark |
 | OpenRouter | Paid, your own account (about $0.08 for 5 minutes) | Seconds | `google/gemini-3.8-flash-tts`, voice Iapetus, as in the original studio. Your key goes in `.env` (see `.env.example`), never in the chat; the script text leaves your Mac |
 
-To go back to the original at any time: `git switch main` (and `git switch free-local` to return).
-
 ## License
 
-The studio is licensed under the Apache License 2.0 (see `LICENSE`). The bundled fonts in
+The studio is licensed under the Apache License 2.0 (see `LICENSE`). It is based on se-demo-studio, copyright
+2026 Adam Hobgood; the changes made here are listed in `FREE-LOCAL-CHANGES.md`. The bundled fonts in
 `toolkit/job-template/build/fonts/` keep their own SIL Open Font License 1.1: IBM Plex Mono
 (`OFL-IBM-Plex.txt`) and Inter (`OFL-Inter.txt`).
