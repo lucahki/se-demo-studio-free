@@ -13,7 +13,7 @@ const { spawn } = require('child_process');
   const p = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   p.on('pageerror', e => console.error('PAGEERR', e.message));
   p.on('console', m => { if (m.type() === 'error') console.error('CONSOLE', m.text()); });
-  await p.goto('file://' + path.resolve(__dirname, 'comp.html'));
+  await p.goto(require('url').pathToFileURL(path.resolve(__dirname, 'comp.html')).href);   // file:///C:/... on Windows
   await p.evaluate(() => window.ready());
   const stage = await p.$('#stage');
   if (mode === 'stills') {

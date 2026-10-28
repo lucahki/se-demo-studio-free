@@ -3,27 +3,29 @@
 # --test-run also copies the ready-made test run files from .claude/skills/record-demo/test-run/ into the job.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. scripts/platform.sh
+[ -n "$PYTHON" ] || { echo "Python 3 is missing: run scripts/setup.sh"; exit 1; }
 SLUG=${1:?usage: scripts/new-job.sh <job-slug> [chrome_port | --test-run]}
 TEST=0; if [ "${2:-}" = "--test-run" ]; then TEST=1; set -- "$1"; fi
 [[ "$SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "Use lowercase letters, digits and dashes, e.g. cloud-control-webex"; exit 1; }
 DIR=jobs/$SLUG; [ -e "$DIR" ] && { echo "$DIR already exists"; exit 1; }
 mkdir -p jobs   # jobs/ is never in the repo; it is created on first use
 # each job gets its own Chrome port so two jobs never share a browser
-PORT=${2:-$(python3 -c "
+PORT=${2:-$($PYTHON -c "
 import json,glob
 used={json.load(open(f)).get('chrome_port') for f in glob.glob('jobs/*/job.json')}
 print(next(p for p in range(9333,9400) if p not in used))")}
 cp -R toolkit/job-template "$DIR"
 # git does not keep empty folders, so create the template's working folders here
 (cd "$DIR" && mkdir -p assets/captures assets/clips assets/generated assets/public audio/audition audio/music audio/sfx audio/takes logs out research review)
-python3 - "$DIR/job.json" "$SLUG" "$PORT" <<'PY'
+$PYTHON - "$DIR/job.json" "$SLUG" "$PORT" <<'PY'
 import json,sys; f,slug,port=sys.argv[1:4]; d=json.load(open(f)); d['slug']=slug; d['chrome_port']=int(port); json.dump(d,open(f,'w'),indent=2)
 PY
 : > "$DIR/ORCHESTRATOR_NOTES.md"
 printf '# State changes made in the demo environment\n\n| When | What | Where | Why |\n|---|---|---|---|\n' > "$DIR/logs/state_changes.md"
 if [ $TEST = 1 ]; then
   T=.claude/skills/record-demo/test-run; cp -R "$T/job/." "$DIR/"
-  python3 - "$DIR/job.json" "$T/job-settings.json" <<'PY'
+  $PYTHON - "$DIR/job.json" "$T/job-settings.json" <<'PY'
 import json,sys; f,s=sys.argv[1:3]; d=json.load(open(f)); d.update(json.load(open(s))); json.dump(d,open(f,'w'),indent=2)
 PY
   echo "Created test run $DIR (Chrome port $PORT). Next: scripts/chrome.sh $SLUG"; exit 0

@@ -1,8 +1,23 @@
 # Shared helpers for every job script. Run scripts from the job folder: `python3 lib/<script>.py ...`.
 # Finds the studio root (the folder holding .demo-studio), the bundled ffmpeg, and the local voice and
-# transcription models. Everything runs on this Mac, except the narration voice when the job's owner chose the
+# transcription models. Everything runs on this computer, except the narration voice when the job's owner chose the
 # paid OpenRouter voice (job.json "voice": {"engine": "openrouter", ...}); only lib/take.py calls it.
-import json, os, sys, time
+# Runs on macOS and Windows; WINDOWS marks the few places that differ.
+import json, os, platform, subprocess, sys, time
+
+WINDOWS = os.name == 'nt'
+
+def rerun(py, env=None):
+    # Continue this script in another Python process. On Windows os.execv starts that process and returns at once,
+    # so the shell would see the script finish while it still runs; there, wait for it and pass on its exit code.
+    if WINDOWS:
+        sys.exit(subprocess.call([py] + sys.argv, env=env))
+    os.execve(py, [py] + sys.argv, env if env is not None else os.environ)
+
+# Windows: open() and print() default to the system code page (cp1252 here), which garbles accented script text,
+# curly quotes, and the captions. Every job script imports this file first, so run them all in UTF-8 mode instead.
+if WINDOWS and not sys.flags.utf8_mode:
+    rerun(sys.executable, dict(os.environ, PYTHONUTF8='1'))
 
 JOB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -16,13 +31,20 @@ def _studio():
 
 STUDIO = _studio()
 NM = os.path.join(STUDIO, 'toolkit', 'node_modules')
-FF = os.path.join(NM, 'ffmpeg-static', 'ffmpeg')
-FFPROBE = os.path.join(NM, 'ffprobe-static', 'bin', 'darwin', os.uname().machine.replace('x86_64', 'x64'), 'ffprobe')
+EXE = '.exe' if WINDOWS else ''
+FF = os.path.join(NM, 'ffmpeg-static', 'ffmpeg' + EXE)
+_ARCH = {'x86_64': 'x64', 'amd64': 'x64', 'aarch64': 'arm64'}.get(platform.machine().lower(), platform.machine().lower())
+FFPROBE = os.path.join(NM, 'ffprobe-static', 'bin', sys.platform, _ARCH, 'ffprobe' + EXE)
+
+def venv_python(venv):
+    return os.path.join(venv, 'Scripts', 'python.exe') if WINDOWS else os.path.join(venv, 'bin', 'python')
+
 VENV = os.path.join(STUDIO, 'toolkit', '.venv')
-VENV_PY = os.path.join(VENV, 'bin', 'python')
+VENV_PY = venv_python(VENV)
 MODELS = os.path.join(STUDIO, 'toolkit', 'models')
 KOKORO = (os.path.join(MODELS, 'kokoro', 'kokoro-v1.0.onnx'), os.path.join(MODELS, 'kokoro', 'voices-v1.0.bin'))
-WHISPER = os.path.join(MODELS, 'whisper-large-v3-turbo')
+# Whisper large-v3-turbo: for mlx-whisper on a Mac, for faster-whisper (CTranslate2) on Windows
+WHISPER = os.path.join(MODELS, 'faster-whisper-large-v3-turbo' if WINDOWS else 'whisper-large-v3-turbo')
 # Chatterbox needs PyTorch, so it has its own Python (made by scripts/setup-chatterbox.sh, only when a job picks it).
 CHATTERBOX_VENV = os.path.join(STUDIO, 'toolkit', '.venv-chatterbox')
 CHATTERBOX = os.path.join(MODELS, 'chatterbox')
@@ -60,10 +82,10 @@ def use_python(venv, missing):
     # Rerun this script under the given private Python, so commands stay `python3 lib/<script>.py ...`.
     if os.path.realpath(sys.prefix) == os.path.realpath(venv):
         return
-    py = os.path.join(venv, 'bin', 'python')
+    py = venv_python(venv)
     if not os.path.exists(py):
         sys.exit(missing)
-    os.execv(py, [py] + sys.argv)
+    rerun(py)
 
 def use_local_python():
     # Voice and transcription need the studio's own Python (toolkit/.venv, made by scripts/setup.sh).

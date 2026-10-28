@@ -22,3 +22,6 @@ This folder is a studio for recording narrated virtual SE product demos from a l
 - Work for a job stays in `jobs/<slug>/`. Do not modify `toolkit/`, `examples/`, or `.claude/` during a job;
   improvements to the studio itself are a separate task the person asks for.
 - Learner- and customer-facing copy: no em dashes, no slogan stacks, plain and specific.
+- macOS and Windows. On Windows, commands run in Git Bash, and every `python3 ...` in these instructions is
+  `python ...` there (`python3` on Windows is usually the Microsoft Store placeholder, which only prints an install
+  message). The scripts in `scripts/` find Python on their own.

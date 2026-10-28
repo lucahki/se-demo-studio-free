@@ -4,6 +4,7 @@
 # usage: scripts/check-repo.sh    Prints "ok" or "FAIL" per check; exits 1 if anything failed.
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
+. scripts/platform.sh; PYTHON=${PYTHON:-python3}
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 FAILED=0
 
@@ -11,14 +12,14 @@ FAILED=0
 report() {
   if [ -s "$2" ]; then sed "s/^/FAIL  $1: /" "$2"; FAILED=1; else echo "ok    $1"; fi
 }
-# ran_badly <check name>: a check whose python3 exited non-zero did not finish, so its empty result is not a pass
+# ran_badly <check name>: a check whose Python exited non-zero did not finish, so its empty result is not a pass
 ran_badly() {
-  echo "the check did not finish (python3 exited $?); make sure python3 runs" >> "$TMP/$1"
+  echo "the check did not finish ($PYTHON exited $?); make sure Python 3 runs" >> "$TMP/$1"
 }
 
 # Leaks: secrets, personal data, and files that must never be in a public repo.
 # The patterns match real key shapes, so a regex that only mentions a prefix does not trip them.
-python3 - > "$TMP/leaks" <<'PY' || ran_badly leaks
+$PYTHON - > "$TMP/leaks" <<'PY' || ran_badly leaks
 import os, re, subprocess
 PATTERNS = [
     ("OpenRouter or OpenAI style key", r"(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}"),
@@ -27,7 +28,8 @@ PATTERNS = [
     ("AWS secret key", r"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Za-z0-9/+]{40}"),
     ("private key block", r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----"),
     ("phone number", r"(?<![\w.])(?:\+?1[ .-]?)?\(?[2-9][0-9]{2}\)?[ .-][0-9]{3}[ .-][0-9]{4}(?![0-9])"),
-    ("home folder path", r"/Users/[A-Za-z0-9._-]+/"),
+    ("home folder path", r"/Users/[A-Za-z0-9._-]+/"),   # also the C:/ and Git Bash /c/ forms on Windows
+    ("Windows home folder path", r"[A-Za-z]:\\+Users\\+[A-Za-z0-9._-]+\\"),
 ]
 EMAIL = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}"
 EMAIL_OK = {"sec_ops_user_NN@dcloud.cisco.com", "noreply@anthropic.com"}
@@ -58,7 +60,7 @@ PY
 report leaks "$TMP/leaks"
 
 # Syntax: Python and JSON here, JavaScript and shell below.
-PYTHONPYCACHEPREFIX="$TMP/pycache" python3 - > "$TMP/syntax" <<'PY' || ran_badly syntax
+PYTHONPYCACHEPREFIX="$TMP/pycache" $PYTHON - > "$TMP/syntax" <<'PY' || ran_badly syntax
 import json, py_compile, subprocess
 for f in subprocess.check_output(["git", "ls-files", "-z", "*.py", "*.json"], text=True).split("\0"):
     if f.endswith(".py"):
@@ -86,7 +88,7 @@ done < <(git ls-files -z)
 report syntax "$TMP/syntax"
 
 # Studio consistency: lesson citations, the builder prompt template, the studio marker, executable bits.
-python3 - > "$TMP/studio" <<'PY' || ran_badly studio
+$PYTHON - > "$TMP/studio" <<'PY' || ran_badly studio
 import os, re, subprocess
 REFS = ".claude/skills/record-demo/references/"
 lessons = set(re.findall(r"^\s*(L\d+)\.", open(REFS + "LESSONS_LEARNED.md").read(), re.M))
@@ -122,7 +124,7 @@ mkdir "$TMP/copy" && git archive HEAD | tar -x -C "$TMP/copy"
 if ! (cd "$TMP/copy" && scripts/new-job.sh ci-smoke) > "$TMP/err" 2>&1; then
   echo "scripts/new-job.sh ci-smoke failed: $(tail -1 "$TMP/err")" > "$TMP/smoke"
 else
-  python3 - "$TMP/copy/jobs/ci-smoke/job.json" >> "$TMP/smoke" <<'PY' || ran_badly smoke
+  $PYTHON - "$TMP/copy/jobs/ci-smoke/job.json" >> "$TMP/smoke" <<'PY' || ran_badly smoke
 import json, sys
 try:
     job = json.load(open(sys.argv[1]))

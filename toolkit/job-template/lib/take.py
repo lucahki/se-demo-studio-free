@@ -15,7 +15,7 @@
 # show the word without the brackets. Other engines read the plain word.
 import argparse, json, os, re, subprocess, tempfile, time, wave
 from common import (use_local_python, use_chatterbox_python, voice_config, run_ff, KOKORO, CHATTERBOX, CHATTERBOX_MTL,
-                    JOB, LANGS, language, check_budget, post, log_cost, generation_cost)
+                    JOB, LANGS, language, check_budget, post, log_cost, generation_cost, WINDOWS)
 DEFAULTS = {'kokoro': {'name': 'am_michael', 'speed': 1.0},
             # the built-in voice with Resemble's default delivery, 6% slower: chosen by ear on 2026-10-21
             'chatterbox': {'name': 'builtin', 'speed': 0.94, 'seed': 1, 'exaggeration': 0.5, 'cfg_weight': 0.5},
@@ -33,6 +33,8 @@ V = voice_config()
 engine = a.engine or V['engine']
 if engine not in DEFAULTS:
     raise SystemExit('Unknown voice engine %r in job.json "voice". Use one of: %s' % (engine, ', '.join(DEFAULTS)))
+if engine == 'say' and WINDOWS:
+    raise SystemExit('The say engine uses the macOS system voices and does not exist on Windows. Use kokoro for drafts.')
 S = dict(DEFAULTS[engine], **(V if V['engine'] == engine else {}))   # job.json settings apply to its own engine only
 pick = lambda arg, key: arg if arg is not None else S.get(key)
 voice, speed = pick(a.voice, 'name'), float(pick(a.speed, 'speed'))
@@ -75,7 +77,10 @@ elif engine == 'chatterbox':
     ref = None if voice == 'builtin' else os.path.join(JOB, voice)
     if ref and not os.path.exists(ref):
         raise SystemExit('Chatterbox reference clip %s not found. Use "builtin" or a path inside the job folder.' % ref)
-    device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    # an NVIDIA GPU, else the Mac GPU, else the CPU (many times slower: warn, since a full take could run for hours)
+    device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+    if device == 'cpu':
+        print('WARNING: no GPU found, so Chatterbox runs on the CPU and is very slow. Kokoro is the better choice here.', flush=True)
     if LANG == 'en': m = ChatterboxTTS.from_local(CHATTERBOX, device)
     elif not os.path.exists(os.path.join(CHATTERBOX_MTL, 't3_mtl23ls_v2.safetensors')):
         raise SystemExit('Chatterbox Multilingual is not installed. Run scripts/setup-chatterbox.sh --multilingual (3.2 GB, once).')
