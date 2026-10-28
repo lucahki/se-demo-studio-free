@@ -7,6 +7,9 @@ and talk track for approval, then records, narrates, edits, and renders on its o
 
 Built from four real jobs, including a 5-minute Cisco Cloud Control demo (see `examples/`).
 
+Based on [se-demo-studio](https://github.com/achobgood/se-demo-studio) by Adam Hobgood, under the Apache License
+2.0 (`LICENSE`). This version runs free and on your Mac: see "Free, local mode" below for what changed.
+
 ## Start
 
 1. In NodeTerm or Terminal, get the studio and open its folder:
