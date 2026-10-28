@@ -3,23 +3,24 @@
 Run `scripts/setup.sh` from the studio root. It checks everything and installs the capture and render tools
 into `toolkit/node_modules` on first run (about 400 MB; that install needs no admin rights). Rerun it any time;
 it ends with "SETUP OK" or lists what to fix. Walk the person through each failing line below, one at a time, and
-rerun. If they have no Homebrew, use the download links below instead of `brew`; on a company-managed Mac, the
-Node.js, Python, or Chrome installers may need IT.
+rerun. If they have no Homebrew, use the download links below instead of `brew`. On Windows, setup runs in Git Bash
+like every studio command, and the install hints use `winget`. On a company-managed Mac or PC, the Node.js,
+Python, or Chrome installers may need IT.
 
 ## Requirements
 
 | Line in setup.sh output | What to do |
 |---|---|
-| macOS | This studio is built and tested on macOS only. |
-| Node.js | `brew install node`, or the installer from https://nodejs.org (version 20 or newer). |
-| Python 3 | `xcode-select --install` (includes Python 3), or `brew install python`. The system Python needs no extra packages; setup installs a separate Python 3.13 for the voice and Whisper (below). |
+| macOS, Windows | The studio runs on macOS (Apple silicon) and on Windows 10 or 11 through Git Bash, which comes with Git for Windows. Other systems are not supported. |
+| Node.js | `brew install node` (Mac) or `winget install OpenJS.NodeJS.LTS` (Windows), or the installer from https://nodejs.org (version 20 or newer). |
+| Python 3 | Mac: `xcode-select --install` (includes Python 3), or `brew install python`. Windows: `winget install Python.Python.3.13` or https://www.python.org; there `python3` is usually a Microsoft Store placeholder, so the scripts use `python`. The system Python needs no extra packages; setup installs a separate Python 3.13 for the voice and Whisper (below). |
 | Claude Code | Update with `claude update`. The studio was tested on Claude Code 2.1.300. |
-| Google Chrome | Install from https://www.google.com/chrome into Applications (the system one or the one in their home folder). Capture drives a separate Chrome window with its own profile, so their normal browsing is untouched. |
+| Google Chrome | Install from https://www.google.com/chrome (Mac: into Applications, the system one or the one in their home folder; Windows: the normal installer). Capture drives a separate Chrome window with its own profile, so their normal browsing is untouched. |
 | toolkit install | `(cd toolkit && npm install)` and read any error. Behind a corporate proxy, ask IT for the proxy address and run `npm config set proxy <that address>`. |
 | local tools install, Kokoro voice (local), Whisper (local), local tools | See "Local voice and Whisper" below. |
 | Chatterbox voice (optional) | Information only. "not installed" is fine unless a job picks Chatterbox; see "Chatterbox voice" below. |
-| pdftotext (optional) | `brew install poppler`. Needed only when an official source is a PDF (a data sheet, for example); without it that source fails to fetch and the researcher uses another page. |
-| NodeTerm | Recommended; download from https://nodeterm.dev. Without it the builder runs in a second Terminal window (references/SUPERVISING.md). |
+| pdftotext (optional) | Mac: `brew install poppler`. Windows: it comes with Git for Windows. Needed only when an official source is a PDF (a data sheet, for example); without it that source fails to fetch and the researcher uses another page. |
+| NodeTerm | Recommended on a Mac; download from https://nodeterm.dev. Without it the builder runs in a second terminal window (references/SUPERVISING.md). Setup does not look for it on Windows. |
 
 ## Local voice and Whisper
 
@@ -29,28 +30,30 @@ without admin rights:
 | What | Why | Download | On disk |
 |---|---|---|---|
 | `uv` (in `toolkit/.uv`) and Python 3.13 (in `toolkit/.python`) | Kokoro needs Python 3.10 to 3.13 | about 35 MB | about 110 MB |
-| Packages in `toolkit/.venv`, pinned in `toolkit/requirements-local.txt` | kokoro-onnx, ONNX Runtime, mlx-whisper, MLX | about 150 MB | about 620 MB |
+| Packages in `toolkit/.venv`, pinned in `toolkit/requirements-local.txt` (Mac) or `toolkit/requirements-local-windows.txt` (Windows) | kokoro-onnx and ONNX Runtime; mlx-whisper and MLX on a Mac, faster-whisper and CTranslate2 on Windows | about 150 MB | about 620 MB |
 | Kokoro v1.0 model and voices (`toolkit/models/kokoro`) | the narration voice | 354 MB | 354 MB |
-| Whisper large-v3-turbo, MLX format (`toolkit/models/whisper-large-v3-turbo`) | word timestamps | 1.6 GB | 1.6 GB |
+| Whisper large-v3-turbo: MLX format on a Mac (`toolkit/models/whisper-large-v3-turbo`), CTranslate2 format on Windows (`toolkit/models/faster-whisper-large-v3-turbo`) | word timestamps | 1.6 GB | 1.6 GB |
 
 Every model download is checked against its size and SHA-256 before it is kept. After setup, the voice and word
-timing run on this Mac with no network. The scripts switch to `toolkit/.venv` on their own, so commands stay
-`python3 lib/<script>.py`.
+timing run on this computer with no network. The scripts switch to `toolkit/.venv` on their own, so commands stay
+`python3 lib/<script>.py` (`python lib/<script>.py` on Windows). Whisper runs on the Apple GPU on a Mac and on the
+CPU on Windows, where the test run's 45 seconds of narration took about 25 seconds on a laptop.
 
-Licenses: Kokoro model Apache-2.0; kokoro-onnx, ONNX Runtime, MLX, mlx-whisper, and the Whisper weights MIT;
-numpy, scipy, numba BSD; uv MIT or Apache-2.0. Kokoro works out pronunciation with espeak-ng and phonemizer,
+Licenses: Kokoro model Apache-2.0; kokoro-onnx, ONNX Runtime, MLX, mlx-whisper, faster-whisper, CTranslate2, and
+the Whisper weights MIT; numpy, scipy, numba, PyAV BSD; uv MIT or Apache-2.0. Kokoro works out pronunciation with espeak-ng and phonemizer,
 which are GPL-3.0: fine to run and to use the audio they help make, since the GPL covers handing the software
 itself to others. If their company's open source policy asks for GPL tools to be registered even for internal
 use, they can check that.
 
-macOS `say` (`lib/take.py ... --engine say`) is a draft fallback only. Apple's macOS license allows the system
+On a Mac, `say` (`lib/take.py ... --engine say`) is a draft fallback only; it does not exist on Windows. Apple's macOS license allows the system
 voices "for your personal, non-commercial use" and rules out recording or publishing them in a commercial
 context, so a `say` take never goes into a video that is shared.
 
 If a line fails:
 - **DOWNLOAD FAILED**: check the network. Behind a corporate proxy, ask IT for the proxy address and run
-  `export HTTPS_PROXY=<that address>` in the same Terminal before `scripts/setup.sh`. A partial download is
-  deleted and retried on the next run.
+  `export HTTPS_PROXY=<that address>` in the same terminal before `scripts/setup.sh`. A partial download is
+  deleted and retried on the next run. On Windows, setup already allows for a company network that inspects TLS,
+  where curl otherwise refuses to connect because Windows cannot check the certificate's revocation.
 - **local tools install FAILED** or **BROKEN**: delete `toolkit/.venv` and rerun `scripts/setup.sh`.
 - Disk: the tools take about 2.6 GB; deleting the `toolkit/.venv`, `.uv`, `.python`, and `models` folders removes
   them completely.
@@ -68,7 +71,8 @@ ends with "CHATTERBOX OK"; rerun it any time as a check.
 Every model file is checked against its size and SHA-256. Licenses: the Chatterbox code and weights are MIT
 (Resemble AI). Its packages are permissive except pykakasi (GPL-3.0, Japanese text only) and soxr (LGPL-2.1),
 fine to run for the same reason as phonemizer above. It runs on the Mac GPU: about 7 times slower than real time
-on an M1 Pro with 16 GB. Every take carries Resemble's inaudible Perth watermark, which marks it as AI speech.
+on an M1 Pro with 16 GB. It is not set up for Windows yet: `scripts/setup-chatterbox.sh` stops there with a
+message, so offer Kokoro. Every take carries Resemble's inaudible Perth watermark, which marks it as AI speech.
 The script rebuilds `toolkit/.venv-chatterbox` by itself when its Python no longer starts (on 2026-10-27 it had been
 made from a Python that was later deleted). If "Chatterbox (local) BROKEN" remains: delete `toolkit/.venv-chatterbox`
 and rerun. To remove it: delete `toolkit/.venv-chatterbox` and `toolkit/models/chatterbox`.
@@ -88,7 +92,7 @@ It receives the script text (and the voice provider behind it does too). Walk th
 2. **Key** at https://openrouter.ai/settings/keys, with a **credit limit** on it (for example $5) so a runaway job
    cannot overspend. `check-openrouter.sh` does not pass without a limit.
 3. **Save it in the studio `.env`, never in the chat.** If there is no `.env` yet, they run
-   `cp .env.example .env && chmod 600 .env`, then `open -e .env` (TextEdit), paste the key after
+   `cp .env.example .env && chmod 600 .env`, then `open -e .env` (TextEdit; on Windows `notepad .env`), paste the key after
    `OPENROUTER_API_KEY=` with no spaces or quotes, and save. If they paste the key into the chat anyway, tell
    them to delete that key on the keys page and create a new one.
 4. **Verify** with `scripts/check-openrouter.sh`. It prints usage and limit, never the key. HTTP 401 means the

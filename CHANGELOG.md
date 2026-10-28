@@ -3,6 +3,17 @@
 What changed in each studio version, newest first. Your version is in the `VERSION` file and on the first line
 that `scripts/setup.sh` prints.
 
+## 0.5.0 (2026-10-28)
+
+- The studio runs on Windows 10 and 11 as well as on an Apple silicon Mac. Setup checks and installs the same way;
+  word timing uses faster-whisper on the CPU there, with the same Whisper model. FREE-LOCAL-CHANGES.md section 11
+  has the details.
+- Not on Windows yet: the Chatterbox voice and the macOS-only `say` draft voice. Use Kokoro, the default.
+- New `lib/play.py` plays an audition or take on either system; auditions print it as their play command.
+- Setup no longer downloads the models again on every rerun when the file size check fails, and works on company
+  networks that inspect TLS.
+- The test run says "on this computer" instead of "on this Mac".
+
 ## 0.4.0 (2026-10-28)
 
 The first version of the free, local studio (this repository). FREE-LOCAL-CHANGES.md has the full comparison

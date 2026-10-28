@@ -1,8 +1,8 @@
 # Record one voice take or audition with the voice engine the owner chose (job.json "voice" "engine"):
-#   kokoro      free, on this Mac, about 4x faster than real time (default)
-#   chatterbox  free, on this Mac, about 7x SLOWER than real time on an M1 Pro; needs scripts/setup-chatterbox.sh
+#   kokoro      free, on this computer, about 4x faster than real time (default)
+#   chatterbox  free, on a Mac, about 7x SLOWER than real time on an M1 Pro; needs scripts/setup-chatterbox.sh
 #   openrouter  paid, sends the script text to OpenRouter; only when the owner chose it and put their key in .env
-#   say         macOS voices, DRAFT ONLY (Apple licenses them for personal, non-commercial use)
+#   say         macOS voices, Mac only, DRAFT ONLY (Apple licenses them for personal, non-commercial use)
 # usage: python3 lib/take.py NAME [VOICE] [--engine E] [--speed S] [--text script/speech.txt] [--dir audio/takes]
 #        chatterbox only: [--seed 1] [--exaggeration 0.5] [--cfg 0.5]     openrouter only: [--model M]
 # Defaults come from job.json "voice"; list Kokoro voices with lib/audition.py --list. Output: <dir>/NAME.wav

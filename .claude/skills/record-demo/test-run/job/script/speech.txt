@@ -1,4 +1,4 @@
-This is a short test run of the demo studio. It checks recording, the voice, captions, and the player, all on this Mac.
+This is a short test run of the demo studio. It checks recording, the voice, captions, and the player, all on this computer.
 
 This is a public Cisco product page, open in the job's own Chrome window. Nothing here needs a sign in, so recording can start right away.
 

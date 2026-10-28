@@ -155,7 +155,7 @@ def log_cost(model, purpose, cost, gen_id=None):
 
 def _urlopen(req, timeout):
     import urllib.request
-    try:  # trust the Mac's certificate store, so a company network that inspects TLS still works
+    try:  # trust the system's certificate store, so a company network that inspects TLS still works
         import truststore; truststore.inject_into_ssl()
     except ImportError:
         pass

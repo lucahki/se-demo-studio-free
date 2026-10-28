@@ -15,7 +15,7 @@ This folder is a studio for recording narrated virtual SE product demos from a l
 - Demo environments with fictional data only (dCloud, a lab, or the person's own sandbox). Never a customer's
   tenant or production system: its screens would go to Anthropic.
 - This copy is the free, local mode (git branch `free-local`). The voice (Kokoro, or Chatterbox when picked) and
-  word timing (Whisper) run on this Mac, music is only a track the person supplies, and Claude does the frame
+  word timing (Whisper) run on this computer, music is only a track the person supplies, and Claude does the frame
   reviews itself. One exception: the narration voice may go through OpenRouter (paid) when the person explicitly
   picks it for a job and has put their own key in `.env`; only `lib/take.py` calls it. Never call OpenRouter for
   anything else, never call OpenAI or any other paid or remote AI service, and never add one during a job.

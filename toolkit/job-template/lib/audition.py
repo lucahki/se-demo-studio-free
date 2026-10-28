@@ -4,7 +4,8 @@
 #        python3 lib/audition.py --engine openrouter [Iapetus Charon ...] [--model M]          paid, about 1 cent each
 #        python3 lib/audition.py --list      (every Kokoro voice of the job's language, with its grade from the Kokoro voice list)
 # The sample and the default voices follow job.json "language" (default English).
-# Output: audio/audition/A_<voice>.wav (Kokoro) or A_<engine>_<voice>.wav; each line prints its play command.
+# Output: audio/audition/A_<voice>.wav (Kokoro) or A_<engine>_<voice>.wav; each line prints its play command
+# (lib/play.py, which works on macOS and Windows).
 # Save the pick in job.json "voice" (see PIPELINE.md step 3 for each engine's fields).
 import argparse, os, subprocess, sys
 from common import language
@@ -61,4 +62,4 @@ for v in a.voices or DEFAULT[a.engine]:
     cmd += ['--model', a.model] if a.model else []
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
     label = '%-3s %-15s' % (GRADES.get(v, '?'), KIND.get(v[:2], '')) if a.engine == 'kokoro' else '%-19s' % a.engine
-    print('%-12s %s afplay audio/audition/%s.wav' % (v, label, name))
+    print('%-12s %s %s lib/play.py audio/audition/%s.wav' % (v, label, 'python' if os.name == 'nt' else 'python3', name))

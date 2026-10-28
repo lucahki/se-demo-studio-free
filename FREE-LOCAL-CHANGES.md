@@ -95,7 +95,7 @@ message instead of mixing without it.
 ## 5. Setup
 
 You need what the original needed (macOS, Chrome, Node.js 20 or newer, Python 3, Claude Code with Opus 5.5) and
-an **Apple Silicon Mac**, because Whisper runs on MLX. Then run `scripts/setup.sh` from the studio folder. It
+an **Apple Silicon Mac**, because Whisper runs on MLX (or, since 2026-10-28, a Windows PC: section 11). Then run `scripts/setup.sh` from the studio folder. It
 installs everything below inside `toolkit/`, with no admin rights:
 
 | What | Where | Download | On disk |
@@ -183,7 +183,8 @@ others. Check your company's open source policy if it asks for GPL tools to be r
 - **No music or art generation.** Music must be a track you have the rights to; title cards are plain HTML and
   CSS.
 - **No AI caller.** Demos with a live phone call need a person to place it.
-- **Apple Silicon only.** Whisper runs on MLX, which needs an M-series Mac.
+- **Apple Silicon or Windows.** On a Mac, Whisper runs on MLX, which needs an M-series Mac. Intel Macs are not
+  supported. Windows uses faster-whisper instead (section 11).
 - **Disk and first download.** About 2.1 GB to download and 2.6 GB on disk, on top of the original 400 MB.
 - **`say` is drafts only.** The macOS voices may not be used in a shared video.
 - **Pinned versions.** The Python packages and model files are pinned by version and checksum. Newer versions
@@ -254,3 +255,23 @@ listening by ear. They are now in the template, so new jobs get them. Jobs made 
 
 Files: `toolkit/job-template/lib/` (`build_voice.py`, `mix.py`, new `music_bed.py` and `join_scan.py`),
 `toolkit/job-template/job.json` (`music` fields), the test run's `job-settings.json`, PIPELINE.md, MODELS.md.
+
+## 11. Later change: Windows (2026-10-28)
+
+The studio now runs on Windows 10 or 11 as well as on an Apple silicon Mac. Claude Code on Windows runs its
+commands in Git Bash, so the scripts stay in bash; what differs between the two systems is in one file,
+`scripts/platform.sh`, which the other scripts load. On a Mac, everything works as before.
+
+| Part | On Windows |
+|---|---|
+| Word timing (`lib/stt.py`) | faster-whisper (CTranslate2) on the CPU, in place of mlx-whisper, which needs Apple silicon. The same model (Whisper large-v3-turbo, converted for CTranslate2, MIT, pinned by commit and checksum) and the same output file. Packages pinned in `toolkit/requirements-local-windows.txt`, at the same versions as the Mac's wherever both use a package |
+| Python | `python3` on Windows is usually a Microsoft Store placeholder, so the scripts find `python` themselves and `CLAUDE.md` tells Claude to use it. Job scripts run in Python's UTF-8 mode there, so accented script text and captions are not garbled |
+| Setup (`scripts/setup.sh`) | Windows checks and `winget` install hints. On a company network that inspects TLS, curl and uv could not connect from Windows; setup now allows for that |
+| Job Chrome (`scripts/chrome.sh`) | Finds `chrome.exe` and stops it with `taskkill` |
+| Playing audio | New `lib/play.py` plays a WAV file on either system (`afplay` on a Mac, Python's `winsound` on Windows); auditions print it as their play command |
+| Not on Windows yet | Chatterbox (`scripts/setup-chatterbox.sh` stops with a message) and the `say` draft voice (macOS only). NodeTerm is not checked for; the builder runs in a second terminal window |
+
+Tested with the test run on a Windows 11 laptop (Intel Core i7-13800H, CPU only): setup installed everything and
+a second run downloaded nothing; Kokoro read the 44.6 s script in 12 s; faster-whisper timed all 119 words in 26 s
+with no wording differences; `edge check: ok`; the 8-chunk render of the 55 s video took 97 s; captions and player
+completed. The test run's narration now says "on this computer" instead of "on this Mac".

@@ -40,14 +40,14 @@ agree to one before the interview. It records a short narrated video of a public
 `test-run/` (next to this skill), proving the install, capture, the local voice and Whisper, render, captions, and player.
 No interview, research, claim check, music, or storyboard stop. Run Step 0 first (items 0, 1, and 3).
 
-Tell them first: it takes about 5 to 10 minutes and costs nothing (everything except Claude runs on their Mac); a separate
+Tell them first: it takes about 5 to 10 minutes and costs nothing (everything except Claude runs on their computer); a separate
 Chrome window opens on a public Cisco page, with nothing to sign in to; leave it alone while it records (about a minute).
 
 1. From the studio root: `scripts/new-job.sh test-run --test-run` (if `jobs/test-run` exists, use `test-run-2`, and
    so on; `<slug>` below). It copies the ready-made test files and settings into the job.
 2. `scripts/chrome.sh <slug>`. In `jobs/<slug>/`: `node capture/rec.js take1 capture/takes/test_run.js`, then
    `python3 lib/recsheet.py take1 4 12 26 44` and look at `review/sheet_take1.jpg`: the Cisco page, no cookie banner.
-3. Voice: `python3 lib/take.py T1` (Kokoro's `am_michael`, on this Mac), `python3 lib/stt.py audio/takes/T1.wav`,
+3. Voice: `python3 lib/take.py T1` (Kokoro's `am_michael`, on this computer), `python3 lib/stt.py audio/takes/T1.wav`,
    `python3 lib/check_take.py T1`, `python3 lib/build_voice.py T1` (it must end with `edge check: ok`).
 4. Picture and sound: `python3 lib/build_clips.py`, `python3 lib/cursor_tracks.py`, `python3 lib/sfx.py`,
    `python3 lib/sfx_events.py`, `python3 lib/mix.py out/mix.wav`.
@@ -56,7 +56,7 @@ Chrome window opens on a public Cisco page, with nothing to sign in to; leave it
 
 If a step fails, stop and tell them which part of the setup it points to (local tools, Chrome, voice, render), using
 references/SETUP.md. Tell them after: the video is `jobs/<slug>/out/<slug>_v1.mp4` and the player with captions
-is `jobs/<slug>/player.html` (offer `open jobs/<slug>/player.html`); that it cost nothing; and that a real demo starts with
+is `jobs/<slug>/player.html` (offer `open jobs/<slug>/player.html`, or `start jobs/<slug>/player.html` on Windows); that it cost nothing; and that a real demo starts with
 the interview and a voice audition, needs a demo environment they sign in to, and takes a few hours (a recent one took about 4). Offer to start it.
 
 ## Version in another language
@@ -110,15 +110,15 @@ do and that it will stop for their approval at the storyboard.
 
 **Voice audition (before launch).** First the voice engine they picked in the interview (INTERVIEW.md question
 11), then the voice itself by ear. You cannot hear audio, so the choice is theirs: ask them to play each sample
-(`afplay audio/audition/<file>.wav`, or double-click the files in Finder). Each audition command prints its play
-commands; `--text <file>` uses a line of their own script.
+(`python3 lib/play.py audio/audition/<file>.wav`, or double-click the files in Finder or File Explorer). Each
+audition command prints its play commands; `--text <file>` uses a line of their own script.
 
-- **Kokoro** (free, on this Mac, fast; the default). Run `python3 lib/audition.py`: one short sample in seven
+- **Kokoro** (free, on this computer, fast; the default). Run `python3 lib/audition.py`: one short sample in seven
   voices, each with its quality grade (`--list` shows all English voices; name voices to try others). Say plainly
   that Kokoro's best male voices grade C+ and its best female voices A and A- (`af_heart` A), so it is worth
   hearing both even if they asked for one. Offer a speed of 0.9 to 1.1 for the pick
   (`python3 lib/audition.py <voice> --speed 0.95`). Save as `"voice": {"engine": "kokoro", "name": ..., "speed": ...}`.
-- **Chatterbox** (free, on this Mac, slow). Check that `scripts/setup-chatterbox.sh` ends with "CHATTERBOX OK";
+- **Chatterbox** (free, on a Mac, slow; not set up for Windows yet, so offer Kokoro there). Check that `scripts/setup-chatterbox.sh` ends with "CHATTERBOX OK";
   if it is not installed, tell them it downloads about 3.5 GB once, and run it only after they agree. Then
   `python3 lib/audition.py --engine chatterbox` (about a minute). It has one voice, `builtin`, read 6% slower by
   default (speed 0.94, picked by ear as less rushed than 1.0). It takes about 7 times real time on an M1 Pro, so
@@ -136,12 +136,12 @@ commands; `--text <file>` uses a line of their own script.
   "budget_usd": 2}`; `budget_usd` caps this job's voice spend, and raising it needs their yes.
 
 Save the pick in job.json and in PROMPT.md's voice slot and "Owner decisions". Never use `--engine say` for a
-video: Apple licenses the macOS voices for personal, non-commercial use only.
+video: Apple licenses the macOS voices for personal, non-commercial use only (and `say` does not exist on Windows).
 
 ## Step 5: launch and supervise
 
 Launch the builder from the studio root with `--model claude-opus-5-5`: as a NodeTerm session, or in a second
-Terminal window when NodeTerm is not installed (both in references/SUPERVISING.md). Then supervise. Relay LOGIN NEEDED, OWNER DECISION NEEDED, and TOOL REQUEST messages, and relay OWNER
+terminal window when NodeTerm is not installed or on Windows (both in references/SUPERVISING.md). Then supervise. Relay LOGIN NEEDED, OWNER DECISION NEEDED, and TOOL REQUEST messages, and relay OWNER
 ACTION NEEDED at once (a take is waiting on it; when the demo must respond, only after the builder says its tested
 responder is armed); present the storyboard in full at STORYBOARD READY and pass their
 decision back; check the rough cut; give the final report.
@@ -152,7 +152,7 @@ decision back; check the rough cut; give the final report.
   decisions".
 - Never type, read, or store passwords, one-time codes, cookies, or tokens.
 - Never call a paid or remote AI service (OpenRouter, OpenAI, or any other). Everything except Claude runs on this
-  Mac. The one exception is the OpenRouter voice, through `lib/take.py` only, when the person picked it for this job.
+  computer. The one exception is the OpenRouter voice, through `lib/take.py` only, when the person picked it for this job.
 - Never do tenant administration in a demo environment, except the specific changes the person allowed by name in
   the interview, each with its reset rule and logged; never touch another job's Chrome port.
 - Never record, screenshot, or keep a sign-in, SSO, password, or one-time-code page. If a raw frame or screenshot
