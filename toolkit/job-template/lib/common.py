@@ -90,19 +90,36 @@ def api_key():
     sys.exit('OPENROUTER_API_KEY is not set. Put it in the studio .env (see .env.example), never in chat.')
 
 def spent():
+    # (billed total, number of paid calls with no known cost). A call logged before OpenRouter reported its cost is
+    # looked up again and its line filled in; one that still has no cost is counted as unknown, never as $0.
     if not os.path.exists(COSTS):
-        return 0.0
-    total = 0.0
-    for line in open(COSTS):
+        return 0.0, 0
+    lines = [l for l in open(COSTS).read().splitlines() if l.strip()]
+    total, unknown, changed = 0.0, 0, False
+    for i, line in enumerate(lines):
         try:
-            total += float(json.loads(line).get('cost') or 0)
-        except Exception:
-            pass
-    return total
+            r = json.loads(line)
+        except ValueError:
+            unknown += 1; continue
+        if r.get('cost') is None and r.get('id'):
+            r['cost'] = generation_cost(r['id'], tries=2)
+            if r['cost'] is not None:
+                lines[i] = json.dumps(r); changed = True
+        try:
+            total += float(r.get('cost'))
+        except (TypeError, ValueError):
+            unknown += 1
+    if changed:
+        open(COSTS, 'w').write('\n'.join(lines) + '\n')
+    return total, unknown
 
 def check_budget(estimate=0.0):
     cap = float(voice_config().get('budget_usd', 2))
-    s = spent()
+    s, unknown = spent()
+    if unknown:
+        sys.exit('BUDGET STOP: %d paid call(s) in logs/costs.jsonl have no billed cost (OpenRouter did not report it), '
+                 'so this job\'s spend is unknown. Ask the owner to look it up at https://openrouter.ai/activity and '
+                 'put it in that line\'s "cost", then rerun.' % unknown)
     if s + estimate > cap:
         sys.exit('BUDGET STOP: this job has spent $%.2f of its $%.2f voice cap. Ask the owner before raising '
                  '"budget_usd" in job.json "voice".' % (s, cap))
