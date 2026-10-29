@@ -16,15 +16,17 @@
 #   1. Some configuration guides are BOOK INDEXES that list chapter titles only.
 #      Use --links to find the chapter and fetch that.
 #   2. Some sources (data sheets) are PDFs. Stripping HTML tags from a PDF yields
-#      binary that looks like text. PDFs need pdftotext (brew install poppler).
+#      binary that looks like text. PDFs need pdftotext (macOS: brew install poppler;
+#      Windows: it comes with Git for Windows).
 
 set -uo pipefail
+. "$(dirname "$0")/platform.sh"
 URL="${1:?usage: fetch-cisco-source.sh <url> [--links|--grep TERM]}"
 MODE="${2:-}"
 TERM_ARG="${3:-}"
 
 TMP=$(mktemp)
-CODE=$(curl -s -m 45 -L -o "$TMP" -w "%{http_code}" "$URL")
+CODE=$("${CURL[@]}" -s -m 45 -L -o "$TMP" -w "%{http_code}" "$URL")
 if [ "$CODE" != "200" ]; then
   echo "FETCH_FAILED http=$CODE url=$URL"
   rm -f "$TMP"
@@ -36,7 +38,7 @@ if file "$TMP" | grep -qi "pdf"; then
   if command -v pdftotext >/dev/null 2>&1; then
     pdftotext -layout "$TMP" - 2>/dev/null | { [ "$MODE" = "--grep" ] && grep -i -- "$TERM_ARG" || cat; }
   else
-    echo "FETCH_FAILED pdf needs pdftotext (brew install poppler); use another source page meanwhile. url=$URL"
+    echo "FETCH_FAILED pdf needs pdftotext (macOS: brew install poppler; Windows: comes with Git for Windows); use another source page meanwhile. url=$URL"
     rm -f "$TMP"
     exit 1
   fi
@@ -46,7 +48,7 @@ fi
 
 if [ "$MODE" = "--links" ]; then
   echo "=== LINKED PAGES ==="
-  python3 - "$TMP" "$URL" <<'PY'
+  $PYTHON - "$TMP" "$URL" <<'PY'
 import re, sys
 from urllib.parse import urljoin
 html = open(sys.argv[1], encoding="utf-8", errors="ignore").read()
@@ -67,7 +69,7 @@ PY
 fi
 
 echo "=== TEXT ==="
-python3 - "$TMP" "$MODE" "$TERM_ARG" <<'PY'
+$PYTHON - "$TMP" "$MODE" "$TERM_ARG" <<'PY'
 import re, sys, html as H
 raw = open(sys.argv[1], encoding="utf-8", errors="ignore").read()
 mode, term = sys.argv[2], sys.argv[3]

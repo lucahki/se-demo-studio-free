@@ -6,10 +6,13 @@
 # --multilingual also fetches Chatterbox Multilingual (23 languages, same licence and commit; 3.2 GB more) into
 # toolkit/models/chatterbox-mtl, for jobs whose job.json "language" is not English. Remove: rm -rf toolkit/models/chatterbox-mtl
 cd "$(dirname "$0")/.."
+. scripts/platform.sh
+# Windows needs its own pinned packages (PyTorch for NVIDIA GPUs); until they exist, stop before installing the Mac ones
+[ $PLATFORM = windows ] && { echo "Chatterbox is not set up for Windows yet. Use the Kokoro voice."; exit 1; }
 ok=1; MTL=0; [ "$1" = "--multilingual" ] || [ -d toolkit/models/chatterbox-mtl ] && MTL=1
 say() { printf '%-28s %s\n' "$1" "$2"; }
 export UV_PYTHON_INSTALL_DIR="$PWD/toolkit/.python" UV_NO_CACHE=1
-UV=toolkit/.uv/bin/uv; PY=toolkit/.venv-chatterbox/bin/python
+UV=toolkit/.uv/$VENV_BIN/uv$EXE; PY=toolkit/.venv-chatterbox/$VENV_BIN/python$EXE
 [ -x $UV ] || { say "uv" "MISSING: run scripts/setup.sh first"; exit 1; }
 reqhash=$(shasum -a 256 toolkit/requirements-chatterbox.txt | awk '{print $1}')
 # a venv whose own Python no longer starts (for example made from a Python that was later deleted) is rebuilt
@@ -24,9 +27,9 @@ if [ "$(cat toolkit/.venv-chatterbox/.studio-req-hash 2>/dev/null)" != "$reqhash
 fi
 # fetch <label> <url> <file> <bytes> <sha256>: download once, keep only a file with the expected size and checksum
 fetch() {
-  [ -f "$3" ] && [ "$(stat -f %z "$3")" = "$4" ] && return 0
+  [ -f "$3" ] && [ "$(filesize "$3")" = "$4" ] && return 0
   echo "Downloading $1 ($(( $4 / 1000000 )) MB)..."; mkdir -p "$(dirname "$3")"
-  if curl -fL --retry 3 --progress-bar -o "$3.part" "$2" && [ "$(shasum -a 256 "$3.part" | awk '{print $1}')" = "$5" ]; then mv "$3.part" "$3"; else rm -f "$3.part"; return 1; fi
+  if "${CURL[@]}" -fL --retry 3 --progress-bar -o "$3.part" "$2" && [ "$(shasum -a 256 "$3.part" | awk '{print $1}')" = "$5" ]; then mv "$3.part" "$3"; else rm -f "$3.part"; return 1; fi
 }
 C=https://huggingface.co/ResembleAI/chatterbox/resolve/5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18; D=toolkit/models/chatterbox
 fetch "Chatterbox voice encoder" $C/ve.safetensors $D/ve.safetensors 5695784 f0921cab452fa278bc25cd23ffd59d36f816d7dc5181dd1bef9751a7fb61f63c &&

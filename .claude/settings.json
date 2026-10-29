@@ -2,7 +2,8 @@
   "model": "claude-opus-5-5",
   "effortLevel": "high",
   "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-opus-5-5"
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-opus-5-5",
+    "PYTHONUTF8": "1"
   },
   "permissions": {
     "deny": [
@@ -18,6 +19,7 @@
       "Bash(scripts/chrome.sh *)",
       "Bash(scripts/fetch-cisco-source.sh *)",
       "Bash(python3 lib/*)",
+      "Bash(python lib/*)",
       "Bash(node capture/*)",
       "Bash(node build/render.js *)",
       "Bash(build/render_par.sh *)",
@@ -32,6 +34,7 @@
       "Bash(rm -rf capture/rec/*)",
       "Bash(rm -rf assets/clips/*)",
       "Bash(python3 -m json.tool *)",
+      "Bash(python -m json.tool *)",
       "mcp__claude-in-chrome__*"
     ],
     "defaultMode": "acceptEdits"

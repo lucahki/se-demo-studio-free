@@ -6,16 +6,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=$1; N=${2:-8}; MIX=${3:-out/mix.wav}
 ROOT=$(pwd); while [ ! -f "$ROOT/.demo-studio" ] && [ "$ROOT" != "/" ]; do ROOT=$(dirname "$ROOT"); done
-FF="$ROOT/toolkit/node_modules/ffmpeg-static/ffmpeg"
-TOTALF=$(python3 -c "import json; print(round(json.load(open('build/cues.json'))['total']*30))")
+FF="$ROOT/toolkit/node_modules/ffmpeg-static/ffmpeg"; [ -e "$FF" ] || FF="$FF.exe"   # ffmpeg.exe on Windows
+# frame count and chunk plan with node, which every studio has (python3 may be missing or the Windows Store placeholder)
+TOTALF=$(node -p "Math.round(require('./build/cues.json').total * 30)")
 rm -rf out/chunks; mkdir -p out/chunks
-python3 - "$N" "$TOTALF" > out/chunks/plan.txt <<'PY'
-import sys
-n=int(sys.argv[1]); total=int(sys.argv[2]); per=-(-total//n)
-for i in range(n):
-  a=i*per; b=min(total,(i+1)*per)
-  if a<b: print(i, a, b)
-PY
+PER=$(( (TOTALF + N - 1) / N ))
+for (( i = 0; i < N; i++ )); do a=$(( i * PER )); b=$(( (i + 1) * PER < TOTALF ? (i + 1) * PER : TOTALF )); if [ $a -lt $b ]; then echo "$i $a $b"; fi; done > out/chunks/plan.txt
 : > out/chunks/list.txt
 PIDS=(); CHUNKS=()
 while read i a b; do

@@ -3,7 +3,7 @@
 The session that ran the interview is the supervisor. It launches the builder, relays checkpoints to the
 person, and makes the cheap checks. It does not build the video itself.
 
-## Launch (NodeTerm)
+## Launch (NodeTerm, on a Mac)
 
 1. Write `jobs/<slug>/LAUNCH.txt`, one line:
    `Read jobs/<slug>/PROMPT.md in full and execute it. You are the builder for this job; the supervisor is the session that launched you.`
@@ -27,8 +27,9 @@ studio improvement pass) also runs as its own NodeTerm session, not as a backgro
 runs unattended. The builder's window can still ask to approve an unusual command; tell the person to glance at
 it now and then, or to answer from the NodeTerm canvas. Nothing is installed without their yes (TOOL REQUEST).
 
-**Without NodeTerm:** ask the person to open a second Terminal window, `cd` to the studio root, run
-`claude --model claude-opus-5-5`, and paste the line from LAUNCH.txt (write it as in step 1). Record "Terminal
+**Without NodeTerm, and on Windows:** ask the person to open a second terminal window (Terminal on a Mac; Windows
+Terminal or PowerShell on Windows), `cd` to the studio root, run `claude --model claude-opus-5-5`, and paste the
+line from LAUNCH.txt (write it as in step 1). Record "Terminal
 window" and the launch time in `jobs/<slug>/SUPERVISOR.md`. Watch `STATUS.md` the same way. To reach
 the builder, append to `ORCHESTRATOR_NOTES.md` and ask the person to type "New entry in ORCHESTRATOR_NOTES.md,
 read it now." into that window. Do not run the builder as a subagent: it could not launch its own explorers or
@@ -88,7 +89,7 @@ Ask for approval or changes. Then append `STORYBOARD APPROVED` (with any changes
   ran and what it found, every `CURSOR JUMP` is fixed, and every `CURSOR CUT` is faded or parked (L66).
 - Pull full-size frames of any shot with account names, emails, or third-party data if redaction applies.
 - Go through `review/LISTEN.md` with the person: each line with its time in `audio/voice.wav` (they can play it
-  with `afplay` or in QuickTime). You cannot hear audio, so pronunciation and artifacts are their call; pass
+  with `python3 lib/play.py audio/voice.wav`, or in any media player). You cannot hear audio, so pronunciation and artifacts are their call; pass
   any rewording back to the builder.
 - With the OpenRouter voice only: the voice spend so far is the sum of `cost` in `logs/costs.jsonl`, against
   job.json "voice" "budget_usd"; include it in the final report. Raise the cap only with the person's yes.

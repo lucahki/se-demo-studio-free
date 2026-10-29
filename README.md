@@ -7,7 +7,7 @@ and talk track for approval, then records, narrates, edits, and renders on its o
 
 Built from four real jobs, including a 5-minute Cisco Cloud Control demo (see `examples/`).
 
-Everything except Claude runs on your Mac and costs nothing beyond your Claude plan: the voice, word timing, music,
+Runs on a Mac or a Windows PC. Everything except Claude runs on your computer and costs nothing beyond your Claude plan: the voice, word timing, music,
 and frame reviews need no paid service or API key. Narration and captions in English, Italian, Spanish, French, or
 Brazilian Portuguese.
 
@@ -17,7 +17,8 @@ License 2.0) and is now developed separately. What changed is under "Free, local
 
 ## Start
 
-1. In NodeTerm or Terminal, get the studio and open its folder:
+1. In a terminal (NodeTerm or Terminal on a Mac; Windows Terminal or PowerShell on Windows), get the studio and open
+   its folder:
    `git clone https://github.com/lucahki/se-demo-studio-free.git && cd se-demo-studio-free`. Always start Claude from
    this folder; the studio's agents only load here. For updates, see Updates below.
 2. Run `claude`. The first time, accept the prompt to trust this folder (the studio's pre-approved commands only
@@ -32,20 +33,22 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
 - To get the newest version, run `git pull` in the studio folder. If git says there is a conflict, you changed
   the same lines yourself; ask Claude to help you choose.
 - Claude runs setup each time you start a new demo, and setup installs anything the new version needs.
-- Changes made in this studio are in `FREE-LOCAL-CHANGES.md`. `CHANGELOG.md` lists the original studio's versions
-  up to the one this studio builds on (`VERSION`, also the first line setup prints).
+- Changes made in this studio are in `FREE-LOCAL-CHANGES.md`. `CHANGELOG.md` lists each version (`VERSION`, also
+  the first line setup prints).
 
 ## What you need
 
-- A Mac with Apple silicon (M1 or newer), Google Chrome, Node.js 20 or newer, and Python 3. `scripts/setup.sh` checks all of it and installs
-  the capture and render tools into `toolkit/` (about 400 MB) and the local voice and Whisper (about 2.6 GB).
+- A Mac with Apple silicon (M1 or newer), or a Windows 10 or 11 PC with Git for Windows (Claude Code on Windows
+  needs it too). Then Google Chrome, Node.js 20 or newer, and Python 3. `scripts/setup.sh` checks all of it and
+  installs the capture and render tools into `toolkit/` (about 400 MB) and the local voice and Whisper (about
+  2.6 GB). On Windows, setup and the studio's commands run in Git Bash, which Claude Code uses for its commands.
 - Claude Code (tested on version 2.1.300; `claude update` to upgrade) with access to Opus 5.5. The studio runs
   every session at `claude-opus-5-5`, high effort. A build runs for 1 to 2 hours and uses your Claude plan.
 - NodeTerm (recommended): a terminal app that shows each Claude session as a window on a canvas, so you can watch
   the builder next to the session you talk to. Download it from https://nodeterm.dev.
-  Without it, the builder runs in a second Terminal window.
+  Without it, the builder runs in a second terminal window.
 - No paid services and no API keys by default. The voice (Kokoro, or Chatterbox if you pick it) and word timing
-  (Whisper) run on your Mac, music is optional and only a track you supply, and Claude does the frame reviews
+  (Whisper) run on your computer, music is optional and only a track you supply, and Claude does the frame reviews
   itself. Claude usage comes from your Claude plan. If you have your own OpenRouter account, you can pick its
   paid voice instead (see "Choosing a voice" below).
 - A demo environment: a Cisco dCloud instant demo, a partner or Cisco lab, or your own sandbox with fictional
@@ -55,12 +58,12 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
   that check can miss an unusual sign-in page, so look at the contact sheets for any sign-in frame.
 - Disk: a 5-minute job can use about 10 GB before cleanup.
 
-## What leaves your Mac
+## What leaves your computer
 
 - **Anthropic (Claude):** everything Claude reads while it works, including the product screens it explores, page
   text, screenshots, and the files in the job folder.
 - **Nothing else**, unless you pick the paid OpenRouter voice: then the script text goes to OpenRouter. With
-  Kokoro or Chatterbox, the voice and word timing run on your Mac. Setup downloads the tools once, from PyPI,
+  Kokoro or Chatterbox, the voice and word timing run on your computer. Setup downloads the tools once, from PyPI,
   GitHub, and Hugging Face.
 - This is why the studio is for demo environments with fictional data only.
 
@@ -97,16 +100,16 @@ Compared with the original studio, this one needs no OpenRouter account and spen
 
 | Part | Original | Here |
 |---|---|---|
-| Narration voice | OpenRouter voice models | Kokoro v1.0 on your Mac by default, or Chatterbox on your Mac, or the OpenRouter voice if you have your own account (`lib/take.py`); you pick with `lib/audition.py`. English, Italian, Spanish, French, or Brazilian Portuguese (job.json `"language"`) |
-| Word timing | Whisper through OpenRouter | Whisper large-v3-turbo on your Mac (`lib/stt.py`, mlx-whisper) |
+| Narration voice | OpenRouter voice models | Kokoro v1.0 on your computer by default, or Chatterbox on a Mac, or the OpenRouter voice if you have your own account (`lib/take.py`); you pick with `lib/audition.py`. English, Italian, Spanish, French, or Brazilian Portuguese (job.json `"language"`) |
+| Word timing | Whisper through OpenRouter | Whisper large-v3-turbo on your computer (`lib/stt.py`; mlx-whisper on a Mac, faster-whisper on Windows) |
 | Music | Generated beds | None by default; optionally your own track |
 | Reviews and listening checks | OpenRouter models | Claude reads the frames itself; you do the listening |
 | AI caller | ChatGPT voice mode | Removed |
 | Spend caps | Per job and per key | Only with the OpenRouter voice: a per-job voice cap (`budget_usd`, default $2) and the key's own limit |
 
 The tools are free, and their licenses allow use in a work demo: Kokoro model Apache-2.0; kokoro-onnx, ONNX
-Runtime, MLX, mlx-whisper, and the Whisper weights MIT. Kokoro uses espeak-ng and phonemizer (GPL-3.0) for
-pronunciation; running them and using the audio is fine. macOS `say` is available for drafts only, because
+Runtime, MLX, mlx-whisper, faster-whisper, CTranslate2, and the Whisper weights MIT. Kokoro uses espeak-ng and phonemizer (GPL-3.0) for
+pronunciation; running them and using the audio is fine. On a Mac, `say` is available for drafts only, because
 Apple's license allows its voices for personal, non-commercial use. Details are in
 `.claude/skills/record-demo/references/SETUP.md`.
 
@@ -114,11 +117,11 @@ Apple's license allows its voices for personal, non-commercial use. Details are 
 
 The interview asks which voice engine to use, then you pick the voice by ear:
 
-| Engine | Cost | Speed on an M1 Pro | Notes |
+| Engine | Cost | Speed (M1 Pro Mac; Windows laptop CPU) | Notes |
 |---|---|---|---|
-| Kokoro (default) | Free, on your Mac | A 4-minute script in about a minute | Best voices are female (`af_heart` A); male voices grade C+ |
-| Chatterbox | Free, on your Mac | About 30 minutes per full take of a 4-minute script | One built-in voice, read 6% slower by default. Installed the first time a job picks it (`scripts/setup-chatterbox.sh`, about 3.5 GB). MIT license; every take carries an inaudible AI watermark |
-| OpenRouter | Paid, your own account (about $0.08 for 5 minutes) | Seconds | `google/gemini-3.8-flash-tts`, voice Iapetus, as in the original studio. Your key goes in `.env` (see `.env.example`), never in the chat; the script text leaves your Mac |
+| Kokoro (default) | Free, on your computer | A 4-minute script in about a minute, on either | Best voices are female (`af_heart` A); male voices grade C+ |
+| Chatterbox | Free, on your Mac (not yet on Windows) | About 30 minutes per full take of a 4-minute script | One built-in voice, read 6% slower by default. Installed the first time a job picks it (`scripts/setup-chatterbox.sh`, about 3.5 GB). MIT license; every take carries an inaudible AI watermark |
+| OpenRouter | Paid, your own account (about $0.08 for 5 minutes) | Seconds | `google/gemini-3.8-flash-tts`, voice Iapetus, as in the original studio. Your key goes in `.env` (see `.env.example`), never in the chat; the script text leaves your computer |
 
 ## License
 

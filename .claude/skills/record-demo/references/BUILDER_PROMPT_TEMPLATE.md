@@ -313,7 +313,7 @@ Print "FINAL READY:" with the video and player paths when done.
 
 ## Cost
 
-With a Kokoro or Chatterbox voice, nothing in this job spends money: the voice and Whisper run on this Mac. With
+With a Kokoro or Chatterbox voice, nothing in this job spends money: the voice and Whisper run on this computer. With
 the OpenRouter voice, only `lib/take.py` spends, capped by job.json "voice" "budget_usd" and logged in
 `logs/costs.jsonl`; a BUDGET STOP means ask the owner before raising the cap. Never call OpenRouter for anything
 else, never call OpenAI or any other paid or remote AI service, and never add a key. Never read `.env`.
@@ -324,7 +324,8 @@ Use the toolkit and its local models. If you need to install anything else, stop
 starts with "TOOL REQUEST:": name the tool, why, where it comes from, and roughly how large it is. Wait for the
 go-ahead.
 
-Shell: macOS has no `timeout` command; run long takes in the background and wait for the notification. Delete
+Shell: macOS has no `timeout` command; on any system, run long takes in the background and wait for the
+notification. On Windows, run Python as `python`, not `python3`. Delete
 with absolute paths and no globs (the command safety check blocks `rm` after a `cd` or with a glob), and write
 re-runs to a fresh folder (L60).
 
