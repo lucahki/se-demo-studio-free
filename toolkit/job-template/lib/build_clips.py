@@ -15,9 +15,10 @@ def build_clip(name):
         s = interp(c['keys'], T0 + i / FPS); j = max(0, bisect.bisect_right(ts, s) - 1)
         lst.append(os.path.abspath('capture/rec/%s/%s' % (c['rec'], L['frames'][j]['f'])))
     cf = os.path.join(JOB, 'build', '_concat_%s.txt' % name)
+    q = lambda p: "'%s'" % p.replace("'", "'\\''")   # ffmpeg concat quoting, so a folder like "Trey's demos" works
     with open(cf, 'w') as f:
-        for p in lst: f.write("file '%s'\nduration %.6f\n" % (p, 1 / FPS))
-        f.write("file '%s'\n" % lst[-1])
+        for p in lst: f.write("file %s\nduration %.6f\n" % (q(p), 1 / FPS))
+        f.write("file %s\n" % q(lst[-1]))
     d = os.path.join('assets', 'clips', name); shutil.rmtree(d, ignore_errors=True); os.makedirs(d)
     run_ff(['-f', 'concat', '-safe', '0', '-i', cf, '-vf', 'scale=%d:%d:flags=lanczos,fps=30' % (OW, OH), '-frames:v', str(n), '-q:v', '2', d + '/f_%05d.jpg'])
     got = len(os.listdir(d)); print(name, 'T0 %.2f T1 %.2f frames %d/%d' % (T0, T1, got, n))

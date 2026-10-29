@@ -35,7 +35,8 @@ const { spawn } = require('child_process');
       if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
       if (i % 300 === 0) console.log('frame', i, '/', n, ((Date.now() - t0) / 1000).toFixed(0) + 's');
     }
-    ff.stdin.end(); await new Promise(r => ff.on('close', r));
+    ff.stdin.end(); const code = await new Promise(r => ff.on('close', r));
+    if (code !== 0) { console.error('ffmpeg exited with code', code, 'writing', out); process.exitCode = 1; }
   }
   await b.close();
 })();

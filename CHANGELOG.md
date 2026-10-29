@@ -3,6 +3,29 @@
 What changed in each studio version, newest first. Your version is in the `VERSION` file and on the first line
 that `scripts/setup.sh` prints.
 
+## 0.4.0 (2026-10-28)
+
+The first version of the free, local studio (this repository). FREE-LOCAL-CHANGES.md has the full comparison
+with the original.
+
+- The voice and word timing run on your Mac with free, open models (Kokoro and Whisper), so no OpenRouter
+  account or key is needed. Setup downloads them once, about 2.1 GB.
+- You choose the voice by ear before the build (`lib/audition.py`), and at the rough cut you listen to a short
+  list of lines, because Claude cannot hear audio.
+- Three voice engines: Kokoro (the default), Chatterbox (a more natural read, slower, installed only when a job
+  picks it), or the paid OpenRouter voice from your own key, capped per job by `budget_usd`.
+- Narration and captions in Italian, Spanish, French, and Portuguese, set by job.json "language".
+- Music is a track you supply. It runs under the whole video, lowered while the SE speaks, and its own ending
+  lands at the end. Paragraph joins in the voice are cut at clean silences, so word endings are no longer clipped.
+- The drawn cursor no longer jumps at cuts and speed-ups, and the builder checks for jumps before the final.
+- Fixed: the repo checks reported "ok" when a check could not run (for example with no working `python3`), so a
+  push could pass the secret scan without being scanned.
+- Fixed: a crashed chunk in the parallel render was not noticed, which could give a shorter video with no error.
+  The render now stops and shows that chunk's log.
+- Fixed: the OpenRouter voice cap counted a call as free when OpenRouter did not report its cost. It now asks
+  OpenRouter again, and stops if the cost is still unknown.
+- Fixed: building clips failed when the studio folder name has an apostrophe in it, such as "Trey's demos".
+
 ## 0.3.1 (2026-10-19)
 
 - The builder no longer reads the lessons file on every job; each lesson is stated once, at its step.

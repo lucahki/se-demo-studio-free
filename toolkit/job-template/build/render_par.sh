@@ -17,11 +17,19 @@ for i in range(n):
   if a<b: print(i, a, b)
 PY
 : > out/chunks/list.txt
+PIDS=(); CHUNKS=()
 while read i a b; do
   node build/render.js video out/chunks/c_$i.mp4 30 $a $b > out/chunks/log_$i.txt 2>&1 &
+  PIDS+=($!); CHUNKS+=($i)
   echo "file 'c_$i.mp4'" >> out/chunks/list.txt
 done < out/chunks/plan.txt
-wait
+# wait on each chunk by its pid: a bare `wait` always returns 0, and joining a crashed chunk gives a short video
+FAILED=()
+for k in "${!PIDS[@]}"; do wait "${PIDS[$k]}" || FAILED+=(${CHUNKS[$k]}); done
+if [ ${#FAILED[@]} -gt 0 ]; then
+  for i in "${FAILED[@]}"; do echo "Chunk $i failed (out/chunks/log_$i.txt):"; tail -5 out/chunks/log_$i.txt; done
+  echo "Render stopped: ${#FAILED[@]} of ${#PIDS[@]} chunks failed; nothing was joined."; exit 1
+fi
 if grep -l "PAGEERR\|CONSOLE" out/chunks/log_*.txt >/dev/null 2>&1; then echo "Page errors during render:"; grep -h "PAGEERR\|CONSOLE" out/chunks/log_*.txt | sort -u | head -20; fi
 "$FF" -y -loglevel error -f concat -safe 0 -i out/chunks/list.txt -c copy out/chunks/video.mp4
 if [ -f "$MIX" ]; then
