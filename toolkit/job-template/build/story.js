@@ -23,6 +23,7 @@ const STORY = {
     width: 1720,
     shots: [[S0('walkthrough') - 0.9, S1('walkthrough') + 1.0, 'take1']],          // [from, to, clip] (same as SHOTS in edit.py)
     urls: [[S0('walkthrough') - 0.9, 'app.example.com/home']],                        // [from, address-bar text]
+    // appLabel: 'Webex App',   // the bar's text over app clips (capture/rec_app.js); default the app's own name
     chapters: [['Start in one place', S0('walkthrough') - 0.9]],                      // [label, from]
     cursorOff: [],                                                                     // [from, to]: cursor faded out (a cut is [t, t])
     footer: 'Real product UI · demo environment, fictional data',

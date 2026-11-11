@@ -60,7 +60,9 @@ class Frame {
       '<svg viewBox="0 0 28 28" width="28" height="28"><path d="M4 2 L4 22 L9.5 17 L13 25 L16.6 23.4 L13.2 16 L21 16 Z" fill="#0b1222" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/></svg>');
     this.cx = 960; this.cy = 540; this.s = 1;
   }
-  setUrl(u) { const i = u.indexOf('/'); this.urlEl.innerHTML = i < 0 ? '<b>' + u + '</b>' : '<b>' + u.slice(0, i) + '</b>' + u.slice(i); }
+  // an app clip (capture/rec_app.js) shows the app's name where a browser shows the address
+  setApp(name) { this.bar.classList.add('app'); this.urlEl.textContent = name; }
+  setUrl(u) { this.bar.classList.remove('app'); const i = u.indexOf('/'); this.urlEl.innerHTML = i < 0 ? '<b>' + u + '</b>' : '<b>' + u.slice(0, i) + '</b>' + u.slice(i); }
   still(name, file) { const i = el('img', '', this.cam); i.src = STILLS + file; i.decoding = 'sync'; this.imgs[name] = i; return i; }
   clip(name) { const i = el('img', '', this.cam); i.dataset.clip = name; this.imgs[name] = i; i._cur = ''; return i; }
   camera(x, y, s) {

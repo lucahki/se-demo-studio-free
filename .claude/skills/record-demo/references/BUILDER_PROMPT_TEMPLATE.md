@@ -179,6 +179,12 @@ close, and transitions, and none of it may imitate a product screen.
   - `lib/cursor_tracks.py` ends with a jump check. Before ROUGH CUT READY and again before FINAL READY, fix every
     `CURSOR JUMP` it prints, fade or park every `CURSOR CUT`, and look at rendered stills either side of each
     listed time. Say in the README that the check ran and what it found.
+- A desktop app window (job.json `"native"`, macOS only) is recorded with `capture/rec_app.js`, or with
+  `rec.js --app` when the same moment must show on both screens; explore it with `capture/app.js`. Read
+  references/PIPELINE.md "Native app windows" before the first app take: it drives the real pointer and keyboard
+  (tell the owner before every run that clicks or types, and ask for hands off), there are no page loads (put the
+  app in its starting state off camera), `clickText()` beats coordinates, and Return sends in a chat box. If it
+  prints "PERMISSION NEEDED:", relay it as "OWNER ACTION NEEDED:" with the steps in references/SETUP.md.
 - Record long continuous takes (L18). Check every take right away with `lib/recsheet.py`. Delete superseded and
   failed raw takes as you go, with an absolute path (`rm -rf <job>/capture/rec/<take>`, L60), and record long
   waits at `JPGQ=75` (L32).

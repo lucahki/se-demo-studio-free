@@ -13,7 +13,8 @@ This folder is a studio for recording narrated virtual SE product demos from a l
 - Never read `.env`, and never type or store passwords, codes, cookies, or tokens for the person. Never record
   or screenshot a sign-in page.
 - Demo environments with fictional data only (dCloud, a lab, or the person's own sandbox). Never a customer's
-  tenant or production system: its screens would go to Anthropic.
+  tenant or production system: its screens would go to Anthropic. A desktop app (such as the Webex app) is
+  recorded only while signed in with a demo identity, never the person's everyday account.
 - This copy is the free, local mode (git branch `free-local`). The voice (Kokoro, or Chatterbox when picked) and
   word timing (Whisper) run on this computer, music is only a track the person supplies, and Claude does the frame
   reviews itself. One exception: the narration voice may go through OpenRouter (paid) when the person explicitly

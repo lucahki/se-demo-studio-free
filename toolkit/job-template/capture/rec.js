@@ -1,6 +1,9 @@
 // Record one long take with the DevTools screencast while a take script drives the page like a person.
-// usage: TAG=rec node capture/rec.js <take_name> capture/takes/<script>.js
-// The take script exports: async ({ page, C, mv, click, clickLoc, type, typed, wheel, mark, sleep, cdp, dtext }) => {}
+// usage: TAG=rec node capture/rec.js <take_name> capture/takes/<script>.js [--app]
+// The take script exports: async ({ page, C, mv, click, clickLoc, type, typed, wheel, mark, sleep, cdp, dtext, app }) => {}
+// --app also records the job's native app window (job.json "native", see capture/native.js) in the same take, into
+// capture/rec/<take_name>_app/, on the same clock: the same recording second is the same moment in both clips.
+// The take then drives the app through app.mv, app.click, app.clickText, app.type, app.key, app.text, ...
 // Output: capture/rec/<take_name>/00000.jpg ... and log.json (frame times, pointer track, clicks, keys).
 // Screencast frames arrive only when the page changes; lib/build_clips.py resamples to a steady 30 fps.
 // There is no real cursor in the capture: the pointer path is logged here and drawn in the render.
@@ -15,11 +18,23 @@ const C = require('./cdp'); const fs = require('fs'); const path = require('path
   // never start a take on a sign-in page (checked before an earlier take of the same name is replaced)
   const notSignedIn = await C.signInReason(page);
   if (notSignedIn) { console.log(`LOGIN NEEDED: take ${name} not started, the page looks like a sign-in page (${notSignedIn}). Sign in off camera, then rerun.`); process.exit(2); }
+  // --app: the native app window, recorded alongside (it moves the real pointer, so hands off the mouse)
+  let N, h, appLog, AD, appDir, appBusy = false;
+  if (process.argv.includes('--app')) {
+    N = require('./native'); h = await N.open(); const win = await N.ready(h); appDir = dir + '_app';
+    const s = (await N.check(h)).signin;
+    if (s) { console.log(`LOGIN NEEDED: take ${name} not started, ${win.app} looks like a sign-in screen (${s}). Sign in off camera, then rerun.`); process.exit(2); }
+    fs.rmSync(appDir, { recursive: true, force: true }); fs.mkdirSync(appDir, { recursive: true });
+    appLog = { source: 'app', app: win.app, window: win, frames: [], cursor: [], marks: [] }; AD = N.driver(h, appLog);
+  }
   fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
   // if a sign-in page appears mid-take: stop, delete this take's raw frames, log the deletion, and exit
   let aborted = false;
-  const guard = async () => { if (aborted) return; const why = await C.signInReason(page); if (!why || aborted) return; aborted = true;
+  const guard = async () => { if (aborted) return; let why = await C.signInReason(page);
+    if (!why && h && !appBusy) { appBusy = true; const c = await N.check(h).catch(() => ({})); appBusy = false; if (c.signin) why = appLog.app + ': ' + c.signin; }   // one app check at a time
+    if (!why || aborted) return; aborted = true;
     await cdp.send('Page.stopScreencast').catch(() => {}); fs.rmSync(dir, { recursive: true, force: true });
+    if (h) { await h.call('stop').catch(() => {}); fs.rmSync(appDir, { recursive: true, force: true }); }
     try { fs.appendFileSync(path.join(C.JOB, 'logs', 'state_changes.md'), `| ${new Date().toISOString()} | Deleted raw take ${name} | capture/rec/${name} | A sign-in page appeared (${why}); sign-in screens are never kept |\n`); } catch (e) {}
     console.log(`LOGIN NEEDED: take ${name} stopped and its raw frames deleted, a sign-in page appeared (${why}). Sign in off camera, then rerun.`); process.exit(3); };
   const dtext = async (n = 20000) => page.evaluate(C.DTEXT, n);
@@ -54,13 +69,18 @@ const C = require('./cdp'); const fs = require('fs'); const path = require('path
   await page.mouse.move(cur.x, cur.y);
   page.on('framenavigated', f => { if (f === page.mainFrame()) guard(); });
   const guardTimer = setInterval(guard, 1500);
+  if (h) await AD.home();
   t0 = Date.now();
+  if (h) { log.t0 = appLog.t0 = t0 / 1000; await h.call('start', { dir: appDir, quality: Number(process.env.JPGQ || 90) }); }   // one clock for both clips
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: Number(process.env.JPGQ || 90), maxWidth: 3840, maxHeight: 2160, everyNthFrame: 1 });
   mark('start');
-  try { await body({ page, C, mv, click, clickLoc, type, typed, wheel, mark, sleep, cdp, dtext, cur: () => cur }); } catch (e) { console.log('TAKE SCRIPT ERROR', e.message); }
+  try { await body({ page, C, mv, click, clickLoc, type, typed, wheel, mark, sleep, cdp, dtext, cur: () => cur, app: AD }); } catch (e) { console.log('TAKE SCRIPT ERROR', e.message); }
   mark('end'); await sleep(500); await guard(); clearInterval(guardTimer);
   await cdp.send('Page.stopScreencast');
   fs.writeFileSync(path.join(dir, 'log.json'), JSON.stringify(log));
+  if (h) { const r = await h.call('stop'); await h.close(); appLog.frames = r.frames; fs.writeFileSync(path.join(appDir, 'log.json'), JSON.stringify(appLog));
+    if (r.error) console.log('APP CAPTURE ERROR', r.error);
+    console.log(name + '_app', 'frames', r.frames.length, 'window', appLog.window.px.join('x')); }
   console.log(name, 'frames', n, 'secs', ((Date.now() - t0) / 1000).toFixed(1));
   console.log('check it: python3 lib/recsheet.py', name, '5 15 30 45 60');
   process.exit(0);

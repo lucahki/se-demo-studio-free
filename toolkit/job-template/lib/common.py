@@ -192,3 +192,13 @@ def generation_cost(gen_id, tries=8):
 def run_ff(args, check=True):
     import subprocess
     return subprocess.run([FF, '-nostdin', '-hide_banner', '-loglevel', 'error', '-y'] + args, check=check)
+
+# Recording seconds count from a take's log "t0" when it has one (app takes, and both clips of a rec.js --app
+# take, which share it so the same second is the same moment in both), else from its first frame (Chrome takes).
+def rec_log(take): return json.load(open(os.path.join(JOB, 'capture', 'rec', take, 'log.json')))
+def rec_t0(L): return L.get('t0', L['frames'][0]['t'])
+def rec_marks(take):
+    # {mark name: recording seconds} for build/edit.py, e.g. rec_marks('take1')['asked']; a repeated name keeps its first time
+    L = rec_log(take); t0 = rec_t0(L); out = {}
+    for m in L['marks']: out.setdefault(m['k'], round(m['t'] - t0, 3))
+    return out

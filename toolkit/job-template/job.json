@@ -10,5 +10,6 @@
   "language": "en",
   "respell": {},
   "voice": {"engine": "kokoro", "name": "am_michael", "speed": 1.0},
-  "music": {"file": "", "level_db": -20, "duck_db": -6, "intro_boost_db": 11}
+  "music": {"file": "", "level_db": -20, "duck_db": -6, "intro_boost_db": 11},
+  "native": {"app": ""}
 }

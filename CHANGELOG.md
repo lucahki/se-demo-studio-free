@@ -3,6 +3,25 @@
 What changed in each studio version, newest first. Your version is in the `VERSION` file and on the first line
 that `scripts/setup.sh` prints.
 
+## Unreleased (branch native-app-recording)
+
+- A demo can show a desktop app window, such as the Webex app, as well as the Chrome tab (macOS only). Set
+  job.json `"native": {"app": "Webex"}`. `capture/rec_app.js` records the app on its own; `capture/rec.js --app`
+  records the Chrome tab and the app in the same take, on one clock, so the edit can cut between two screens at
+  the same moment. `capture/app.js` explores the app, the way `capture/tab.js` explores a tab.
+- The app is recorded with Apple's ScreenCaptureKit without the real cursor, and driven with the real pointer and
+  keyboard. Clicks are refused where another app's window is in front and typing is refused unless the app is in
+  front, so a take cannot click or type into another app. The sign-in guard reads the app's accessibility tree.
+- It needs the Command Line Tools (for the Swift compiler) and Screen Recording and Accessibility for the terminal;
+  SETUP.md "Native app capture" walks through them.
+- Pop-up windows such as an incoming-call toast and a call window: `windows()`, `waitWindow()`, and `place()` bring
+  them into the recorded area, and `find`, `clickText`, and `text` can look outside it. PIPELINE.md has an incoming call
+  recipe, tested on the Webex app.
+- Clean-up: at the end of a job that recorded a desktop app, the studio turns the terminal's Screen Recording and
+  Accessibility back to how they were before the job (`node capture/app.js --revoke`), unless the person says no.
+- Over an app clip the frame bar shows the app's name instead of an address. `rec_marks()` in `lib/common.py`
+  reads a take's marks in recording seconds for `build/edit.py`.
+
 ## 0.5.0 (2026-10-28)
 
 - The studio runs on Windows 10 and 11 as well as on an Apple silicon Mac. Setup checks and installs the same way;

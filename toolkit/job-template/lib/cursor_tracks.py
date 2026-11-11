@@ -4,10 +4,11 @@ import bisect, json, math, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'build'))
 from timeline import interp
 import edit
+from common import rec_t0
 meta = json.load(open('build/footage.json'))
 for name, c in edit.CLIPS.items():
     if name not in meta: continue
-    L = json.load(open('capture/rec/%s/log.json' % c['rec'])); T = L['frames'][0]['t']
+    L = json.load(open('capture/rec/%s/log.json' % c['rec'])); T = rec_t0(L)
     cur = L['cursor']; ct = [p['t'] for p in cur]; keys = meta[name]['keys']; T0 = keys[0][0]; n = meta[name]['n']
     track = []
     for i in range(n):

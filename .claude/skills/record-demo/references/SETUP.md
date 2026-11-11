@@ -19,6 +19,7 @@ Python, or Chrome installers may need IT.
 | toolkit install | `(cd toolkit && npm install)` and read any error. Behind a corporate proxy, ask IT for the proxy address and run `npm config set proxy <that address>`. |
 | local tools install, Kokoro voice (local), Whisper (local), local tools | See "Local voice and Whisper" below. |
 | Chatterbox voice (optional) | Information only. "not installed" is fine unless a job picks Chatterbox; see "Chatterbox voice" below. |
+| Native app capture (optional) | Information only, Mac only. Needed only when a job records a desktop app window such as the Webex app; see "Native app capture" below. |
 | pdftotext (optional) | Mac: `brew install poppler`. Windows: it comes with Git for Windows. Needed only when an official source is a PDF (a data sheet, for example); without it that source fails to fetch and the researcher uses another page. |
 | NodeTerm | Recommended on a Mac; download from https://nodeterm.dev. Without it the builder runs in a second terminal window (references/SUPERVISING.md). Setup does not look for it on Windows. |
 
@@ -103,6 +104,30 @@ It receives the script text (and the voice provider behind it does too). Walk th
 
 Never read `.env` yourself (the studio settings deny it); `lib/take.py` loads the key on its own. Each job caps
 its voice spend with job.json "voice" "budget_usd" (default $2).
+
+## Native app capture (optional, macOS)
+
+Only for a job that records a desktop app window, such as the Webex app (job.json `"native"`,
+references/PIPELINE.md "Native app windows"). Not available on Windows.
+
+1. **Swift compiler.** setup.sh prints "Native app capture" as information. If it says the Command Line Tools are
+   missing, run `xcode-select --install` (free, from Apple, about 1 GB).
+2. **Two permissions for the terminal app** that runs Claude Code (Terminal, iTerm, Ghostty, or the editor that
+   hosts the terminal). From the job folder, run `node capture/app.js --permissions`: it opens System Settings,
+   Privacy & Security, at the page for each permission that is off (macOS shows its own request window at most
+   once, and often not for a program run from a terminal). Turn the terminal on under **Screen Recording** (to
+   record the app's windows) and **Accessibility** (to move the pointer, type, and read the app's labels and
+   text). If the terminal is not in a list, click **+** and pick it (Terminal is in Applications, Utilities); the
+   Mac asks for their password or Touch ID to change the list, which they enter themselves. Then quit the
+   terminal completely and reopen it, start `claude` again in the studio root, and rerun the command until it
+   prints both as "on".
+3. Tell them what this grants: any program run from that terminal can record the screen and control the mouse and
+   keyboard. At the end of the job the studio turns both back off, to how they were before the job, unless they
+   say "no" (`node capture/app.js --revoke`, references/SUPERVISING.md). macOS may ask again from time to time
+   whether the terminal may keep recording the screen; the answer is "Allow".
+4. **The app itself.** They open it and sign in themselves, with a demo identity, not their everyday account
+   (CLAUDE.md). During takes the pointer and keyboard are driven for them: hands off until the take ends, and
+   Do Not Disturb on.
 
 ## Claude Code
 

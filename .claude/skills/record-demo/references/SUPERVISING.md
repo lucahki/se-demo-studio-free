@@ -96,7 +96,7 @@ Ask for approval or changes. Then append `STORYBOARD APPROVED` (with any changes
 
 ## Final report to the person
 
-Where the video and player are; the story and what it leaves out; each claim with its source; how
+Where the video and player are; whether the terminal's permissions were turned off (desktop app jobs, below); the story and what it leaves out; each claim with its source; how
 long it took; the evidence boundary (which LISTEN.md lines the person has heard; no SME, brand, or legal review); open owner decisions
 (branding and external use, contested claims, anything left changed in a shared demo environment); and disk to
 reclaim (raw takes and clips). Distinguish "the video is done" from "the video is approved for customers".
@@ -104,3 +104,21 @@ reclaim (raw takes and clips). Distinguish "the video is done" from "the video i
 Before the report, and also when a job stops early, make sure the job's Chrome is stopped
 (`scripts/chrome.sh <slug> --stop`) and ask the person to delete `jobs/<slug>/.chrome-profile`, which holds their
 signed-in session. Remind them never to zip or share `jobs/`: it holds raw, unblurred footage.
+
+**Clean-up of the terminal's permissions** (a job that recorded a desktop app, job.json `"native"` with an app;
+also when such a job stops early). The job gave the terminal app Screen Recording and Accessibility; they belong
+to the terminal, not the job, so they stay on until someone turns them off. Turning them off is the default.
+Before the final report closes, tell the person in plain words what the two permissions let any program run from
+that terminal do (record the screen; move the mouse, type, and read other apps' windows), then ask:
+
+> This job turned on Screen Recording and Accessibility for <terminal app>. I'll turn them off now, back to how
+> they were before the job started. Say "no" if you want to keep them on.
+
+Only an explicit "no" (or "keep them") keeps them; any other answer, including "ok", "sure", or a question you
+then answer, means turn them off. Then, in the job folder, run `node capture/app.js --revoke`. It turns off only
+what this job turned on (from `logs/permissions.json`, written when the job first asked; without that file it
+treats both as off before the job), checks the result, and records it in the same file. Exit 0 with "Done" means
+both are back as before; exit 4 means macOS kept one on, and System Settings is open at that page for them to
+switch it off themselves. Confirm with `node capture/app.js --status` (not `--permissions`, which asks for them again). If they said "no", note that in the final report
+and tell them where to turn the permissions off later (System Settings, Privacy & Security, Screen Recording and
+Accessibility). Never run `--revoke` while the builder may still record, and never in another job's folder.

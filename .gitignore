@@ -8,6 +8,8 @@ toolkit/.uv-cache/
 toolkit/.python/
 toolkit/models/
 /jobs/
+# the native app helper, compiled on first use
+capture/native/.build/
 .DS_Store
 .claude/settings.local.json
 __pycache__/

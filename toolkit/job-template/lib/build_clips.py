@@ -3,13 +3,13 @@
 # usage: python3 lib/build_clips.py [clip ...]   -> assets/clips/<clip>/f_00001.jpg ..., build/footage.json
 import bisect, json, os, shutil, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'build'))
-from common import run_ff, JOB
+from common import run_ff, JOB, rec_t0
 from timeline import interp
 import edit
 FPS = 30; OW, OH = 2560, 1440
 def build_clip(name):
     c = edit.CLIPS[name]; L = json.load(open('capture/rec/%s/log.json' % c['rec']))
-    t0 = L['frames'][0]['t']; ts = [f['t'] - t0 for f in L['frames']]
+    t0 = rec_t0(L); ts = [f['t'] - t0 for f in L['frames']]
     T0, T1 = c['keys'][0][0], c['keys'][-1][0]; n = int(round((T1 - T0) * FPS)); lst = []
     for i in range(n):
         s = interp(c['keys'], T0 + i / FPS); j = max(0, bisect.bisect_right(ts, s) - 1)
@@ -22,7 +22,7 @@ def build_clip(name):
     d = os.path.join('assets', 'clips', name); shutil.rmtree(d, ignore_errors=True); os.makedirs(d)
     run_ff(['-f', 'concat', '-safe', '0', '-i', cf, '-vf', 'scale=%d:%d:flags=lanczos,fps=30' % (OW, OH), '-frames:v', str(n), '-q:v', '2', d + '/f_%05d.jpg'])
     got = len(os.listdir(d)); print(name, 'T0 %.2f T1 %.2f frames %d/%d' % (T0, T1, got, n))
-    return {'t0': T0, 't1': T1, 'n': got, 'keys': c['keys'], 'ramps': edit.RAMPS}
+    return {'t0': T0, 't1': T1, 'n': got, 'keys': c['keys'], 'ramps': edit.RAMPS, 'app': L.get('app') if L.get('source') == 'app' else None}
 def check_shots():
     # scenes.js shows the LAST shot in the list wherever no shot covers t, and holds a clip's first or last frame
     # outside its keys; both flash or freeze the wrong picture while the screen-share frame is up

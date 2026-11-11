@@ -9,7 +9,8 @@ on this computer, except `lib/take.py` when the owner picked the paid OpenRouter
 `job.json`: `title`, `disclosure` (player page), `hours`, `chrome_port` (assigned by new-job.sh),
 `app_url` (landing page for new tabs), `app_match` (URL fragment of the product tab), `theme` (`light`, `dark`,
 or `null`), `respell` (spoken form to written form, e.g. `{"S D WAN": "SD-WAN"}`), `voice` (engine, voice, and speed, see
-step 3), and `music` (see step 5).
+step 3), `music` (see step 5), and `native` (a desktop app window to record, empty `app` for none; see "Native app
+windows" in step 1).
 
 ## 1. Browser, exploration, capture
 
@@ -91,6 +92,97 @@ for (let t = 0; t < 300; t++) {
 }
 mark('owner_done');
 ```
+
+### Native app windows (macOS only)
+
+A story can also show a desktop app, such as the Webex app, next to or instead of the Chrome tab. Set job.json
+`"native": {"app": "Webex"}` (the app's name or bundle id; Webex is `Cisco-Systems.Spark`). Optional: `"size":
+[1440, 810]` (window size in points, 16:9; by default the largest of 1920x1080, 1600x900, 1440x810, 1280x720
+that fits its display) and `"mode": "window"` (only the main window; the default `"app"` captures all of the
+app's windows cropped to the main window, so its menus, pop-ups, and call windows show and other apps do not).
+
+| Step | Command |
+|---|---|
+| Request the two macOS permissions | `node capture/app.js --permissions`: opens the requests and the System Settings pages (exit 4 while one is missing) |
+| Only check them | `node capture/app.js --status` (asks and opens nothing; use it to confirm, for example after `--revoke`) |
+| Running apps with a window | `node capture/app.js --list` |
+| Clean-up at the end of the job (after the owner's yes) | `node capture/app.js --revoke`: the permissions back to how they were before the job (`logs/permissions.json`) |
+| Explore the app | `node capture/app.js '<async JS using app, shot, text, find, sleep, mv, click, clickText, type, key, wheel>'` |
+| Record an app-only take | `node capture/rec_app.js <take> capture/takes/<script>.js` |
+| Record the Chrome tab and the app together | `TAG=rec node capture/rec.js <take> capture/takes/<script>.js --app` -> `capture/rec/<take>/` and `capture/rec/<take>_app/` |
+
+How it differs from a Chrome tab:
+
+- It needs Screen Recording and Accessibility for the terminal app that runs Claude Code (references/SETUP.md
+  "Native app capture"). The helper `capture/native/nativecap.swift` is compiled on first use (about 30 s).
+- Every run first brings the app to the front and sizes its main window to 16:9, centered on its display.
+  Coordinates are frame pixels: the window mapped to 1920x1080, the same space as Chrome takes, `shot()`
+  pictures (1920x1080), the camera, and REDACT. Put the window on a Retina display; at 1x a push-in looks soft
+  (rec_app.js prints a NOTE).
+- It moves the real pointer and types on the real keyboard. Tell the owner before every run that clicks or
+  types, and ask them to keep hands off the mouse and keyboard until it prints the frame count. A click is refused
+  when another app's window covers the point, and typing is refused unless the app is in front, so a take stops
+  rather than click or type into another app. Turn on Do Not Disturb (macOS Focus) for the takes: other apps'
+  notifications are not recorded in `"app"` mode, but a banner over the app blocks clicks under it.
+- There is no DOM. `text()` returns the app's visible text from its accessibility tree (the twin of `dtext()`),
+  `find(/label/, role)` returns matching elements with their 1920x1080 boxes, and `clickText(/label/, { role })`
+  clicks one. Prefer `clickText` to coordinates, as with on-screen labels in Chrome. Check what the tree exposes
+  first (`node capture/app.js 'return await find(/./)'`); where it lacks a label, use coordinates from a `shot()`.
+- `type()` takes no line breaks. Press keys with `key('return')`, `key('return', ['shift'])` (a new line in a
+  chat box), or `key('k', ['cmd'])`. In a chat app, Return sends: read the box back with
+  `(await text()).includes(...)` before pressing it, as `typed()` does in Chrome.
+- `wheel(dy)` scrolls like Chrome's (positive is down), in frame pixels.
+- No page loads: put the app in each take's starting state off camera with `node capture/app.js` (in-app clicks),
+  and start the take script with a check, e.g.
+  `if (!/Messaging/.test(await text())) { mark('wrong_view'); return; }`.
+- The sign-in guard reads the accessibility tree: a sign-in address in an embedded web view, a password field, an
+  email-first step, or a sign-in window title or heading stops the take as in Chrome (exit 2 before, exit 3 with the
+  raw frames deleted during). Without the Accessibility permission it cannot check, so it refuses to start. Exit 5
+  means the window moved or changed size mid-take: rerun it.
+- The app must be signed in with a demo identity (a dCloud or lab user, a sandbox org), never the owner's everyday
+  account: its spaces, contacts, and messages would be recorded and sent to Anthropic in frame reviews.
+
+Pop-ups such as an incoming-call toast and a call window are windows of their own, and can open outside the
+recorded area or on another display. `windows()` lists the app's windows in frame pixels (the main window is
+`main: true`; anything outside 0..1920 by 0..1080 is off camera), `waitWindow(secs, test)` waits for a new one,
+`place(id)` moves a window over the recorded area and sizes it to fill it, and `place(id, [x, y])` moves it without
+resizing. `find`, `clickText`, `text`, and `waitText` take `{ anywhere: true }` to look outside the recorded area.
+
+Incoming call recipe (tested on the Webex app, 2026-11-11, with a call placed from outside):
+
+```js
+const answerBtn = async () => (await find(/\b(answer|accept)\b/i, 'AXButton', { anywhere: true }))[0];
+const endBtn = async () => (await find(/^end call$/i, 'AXButton', { anywhere: true }))[0];
+await mv(1300, 600, 900);                 // the pointer on the app window: Webex opens the toast on that display
+console.log('OWNER ACTION NEEDED: place the call now');
+mark('owner_wait'); let a; while (!(a = await answerBtn())) await sleep(700); mark('ringing');
+const inside = (b, w) => b.x >= w.x && b.y >= w.y && b.x + b.w <= w.x + w.w && b.y + b.h <= w.y + w.h;
+const toast = (await windows()).find(w => !w.main && inside(a, w));
+if (toast) await place(toast.id, [1920 - toast.w - 40, 90]);            // fully in view, top right
+await sleep(2500); a = (await answerBtn()) || a; await click(a.x + a.w / 2, a.y + a.h / 2, 900); mark('answered');
+let e; while (!(e = await endBtn())) await sleep(1000); mark('connected');
+const call = (await windows()).find(w => !w.main && w.w > 300 && inside(e, w));
+if (call) await place(call.id);           // the call window over the recorded area, filling it
+```
+
+What the test showed: the toast opens on the display where the pointer is, and `place` cannot move it to another
+display, so keep the pointer on the app window while waiting (hands off). If `a` is outside 0..1920 by 0..1080
+after `place`, the click still answers but the ringing is off camera: print a warning and retake. With a device
+paired (a desk video device), the button reads "Answer on my computer" and the call took about 40 s to connect; with no
+device it connected in 2 s. First-time tips (such as "Real-time closed captions" with "Got it") are windows of
+their own that stay where they opened: dismiss them in a rehearsal call. The toast also answers to Control+Shift+C
+(`key('c', ['ctrl', 'shift'])`), a fallback when its button has no label.
+
+A take script for `rec_app.js` receives `app` and the same helpers spread out (`mv, click, dblclick, rightClick,
+clickText, find, type, key, wheel, mark, sleep, text, waitText, windows, waitWindow, place`). With `rec.js --app` it receives the page
+helpers as usual plus `app` with the app's own (`app.click(...)`, `app.text()`); the page pointer is virtual and
+the app pointer real, and each clip logs its own cursor.
+
+Both clips of a `rec.js --app` take share one clock (log.json `t0`): the same recording second is the same
+moment in both, so a cut from the Chrome clip to the app clip at matching keys shows one moment from two screens.
+In `build/edit.py`, read marks with `rec_marks('<take>')` (from `common`), which counts from `t0` when the log has
+one; `L['frames'][0]['t']` is only right for Chrome-only takes. Over an app clip the frame bar shows the app's name
+instead of an address (`appLabel` in `build/story.js` frame to change it).
 
 ## 2. Talk track
 
