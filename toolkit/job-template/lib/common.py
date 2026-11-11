@@ -1,7 +1,8 @@
 # Shared helpers for every job script. Run scripts from the job folder: `python3 lib/<script>.py ...`.
 # Finds the studio root (the folder holding .demo-studio), the bundled ffmpeg, and the local voice and
-# transcription models. Everything runs on this computer, except the narration voice when the job's owner chose the
-# paid OpenRouter voice (job.json "voice": {"engine": "openrouter", ...}); only lib/take.py calls it.
+# transcription models. Everything runs on this computer, except a voice the job's owner chose from a remote service
+# with their own key: OpenRouter (job.json "voice" engine "openrouter") or Google Gemini (engine "gemini", for the
+# narration or for a call in job.json "dialogue"). Only lib/take.py calls them.
 # Runs on macOS and Windows; WINDOWS marks the few places that differ.
 import json, os, platform, subprocess, sys, time
 
@@ -60,6 +61,7 @@ LANGS = {'en': {'name': 'English', 'kokoro': None, 'prefix': 'ab'},
          'pt': {'name': 'Português', 'kokoro': 'pt-br', 'prefix': 'p'}}
 COSTS = os.path.join(JOB, 'logs', 'costs.jsonl')
 API = 'https://openrouter.ai/api/v1'
+GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta'
 
 def job_config():
     p = os.path.join(JOB, 'job.json')
@@ -95,21 +97,28 @@ def use_chatterbox_python():
     use_python(CHATTERBOX_VENV, 'Chatterbox is not installed. Run scripts/setup-chatterbox.sh from the studio root '
                                 '(about 3.5 GB download, once).')
 
-# OpenRouter: the paid voice only, and only when the owner chose it. The key is read from the studio .env by this
-# code; Claude never reads .env or sees the key.
-def api_key():
-    k = os.environ.get('OPENROUTER_API_KEY')
+# Keys for the remote voices (OpenRouter, Gemini), only when the owner chose one. A key is read from the studio .env
+# by this code; Claude never reads .env or sees the key, and no key is ever printed or logged.
+def env_key(name):
+    k = os.environ.get(name)
     if k:
         return k
     env = os.path.join(STUDIO, '.env')
+    hint = ''
     if os.path.exists(env):
-        for line in open(env):
-            line = line.strip()
-            if line.startswith('OPENROUTER_API_KEY='):
+        lines = [l.strip() for l in open(env)]
+        for i, line in enumerate(lines):
+            if line.startswith(name + '='):
                 k = line.split('=', 1)[1].strip().strip('"').strip("'")
                 if k:
                     return k
-    sys.exit('OPENROUTER_API_KEY is not set. Put it in the studio .env (see .env.example), never in chat.')
+                nxt = lines[i + 1] if i + 1 < len(lines) else ''
+                if nxt and not nxt.startswith('#') and '=' not in nxt.split()[0]:   # never shown: it may be the key
+                    hint = ' Line %d of .env looks like the key on its own line: put it right after %s= on the same line.' % (i + 2, name)
+    sys.exit('%s is not set. Put it in the studio .env (see .env.example), never in chat.%s' % (name, hint))
+
+def api_key():
+    return env_key('OPENROUTER_API_KEY')
 
 def spent():
     # (billed total, number of paid calls with no known cost). A call logged before OpenRouter reported its cost is
@@ -135,16 +144,18 @@ def spent():
         open(COSTS, 'w').write('\n'.join(lines) + '\n')
     return total, unknown
 
-def check_budget(estimate=0.0):
-    cap = float(voice_config().get('budget_usd', 2))
+def check_budget(estimate=0.0, block='voice'):
+    # The cap is job.json "voice" "budget_usd" for the narration, "dialogue" "budget_usd" for a call (default $2 each),
+    # and it is checked against everything this job has spent on remote voices (logs/costs.jsonl).
+    cap = float((job_config().get(block) or {}).get('budget_usd', 2))
     s, unknown = spent()
     if unknown:
-        sys.exit('BUDGET STOP: %d paid call(s) in logs/costs.jsonl have no billed cost (OpenRouter did not report it), '
-                 'so this job\'s spend is unknown. Ask the owner to look it up at https://openrouter.ai/activity and '
-                 'put it in that line\'s "cost", then rerun.' % unknown)
+        sys.exit('BUDGET STOP: %d paid call(s) in logs/costs.jsonl have no billed cost (the service did not report it), '
+                 'so this job\'s spend is unknown. Ask the owner to look it up (OpenRouter: https://openrouter.ai/activity) '
+                 'and put it in that line\'s "cost", then rerun.' % unknown)
     if s + estimate > cap:
         sys.exit('BUDGET STOP: this job has spent $%.2f of its $%.2f voice cap. Ask the owner before raising '
-                 '"budget_usd" in job.json "voice".' % (s, cap))
+                 '"budget_usd" in job.json "%s".' % (s, cap, block))
     return s
 
 def log_cost(model, purpose, cost, gen_id=None):
@@ -188,6 +199,51 @@ def generation_cost(gen_id, tries=8):
         except Exception:
             time.sleep(3)
     return None
+
+# Google Gemini speech (Google AI Studio, the owner's GEMINI_API_KEY). Prices per 1M tokens on the paid tier, read
+# from https://aistudio.google.com/docs/pricing on 2026-11-11: (from date, text in, audio out). Audio is 25 tokens per
+# second. Every call is logged at these prices even on the free tier (where Google bills nothing), so the budget
+# cap errs on the safe side.
+GEMINI_PRICES = {'gemini-3.8-flash-tts': [('2026-01-01', 0.50, 9.00), ('2027-01-01', 1.00, 18.00)],
+                 'gemini-3.8-flash-lite-tts': [('2026-01-01', 0.50, 6.00), ('2027-01-01', 1.00, 12.00)]}
+
+# The 30 built-in voices (aistudio.google.com/docs/speech-generation, 2026-11-11). Only these can share one two-speaker
+# request; a custom voice ID (voice_..., made in AI Studio's Voice design, remixing, or replication) works in a
+# one-voice request, so a call with one is read line by line.
+GEMINI_VOICES = {'Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir', 'Leda', 'Orus', 'Aoede', 'Callirrhoe', 'Autonoe',
+                 'Enceladus', 'Iapetus', 'Umbriel', 'Algieba', 'Despina', 'Erinome', 'Algenib', 'Rasalgethi',
+                 'Laomedeia', 'Achernar', 'Alnilam', 'Schedar', 'Gacrux', 'Pulcherrima', 'Achird', 'Zubenelgenubi',
+                 'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat'}
+
+def gemini_cost(model, tokens_in, tokens_out):
+    rows = GEMINI_PRICES.get(model) or GEMINI_PRICES['gemini-3.8-flash-tts']   # an unlisted model: the dearest known price
+    today = time.strftime('%Y-%m-%d')
+    _, p_in, p_out = [r for r in rows if r[0] <= today][-1]
+    return round((tokens_in * p_in + tokens_out * p_out) / 1e6, 6)
+
+def gemini_post(model, body, timeout=600, waits=(20, 40)):
+    # One generateContent request. Errors print Google's message (which never holds the key) and a plain reason.
+    # A rate limit (429) is retried after each of the waits (seconds), then reported.
+    import urllib.error, urllib.request
+    for wait in list(waits) + [None]:
+        req = urllib.request.Request('%s/models/%s:generateContent' % (GEMINI_API, model), data=json.dumps(body).encode(),
+                                     headers={'x-goog-api-key': env_key('GEMINI_API_KEY'), 'Content-Type': 'application/json'})
+        try:
+            return json.load(_urlopen(req, timeout))
+        except urllib.error.HTTPError as e:
+            code, msg = e.code, e.read().decode(errors='replace')[:800]
+        if code != 429 or wait is None:
+            break
+        print('Gemini rate limit reached; trying again in %d s' % wait, flush=True); time.sleep(wait)
+    if code in (401, 403) or 'API_KEY_INVALID' in msg:
+        sys.exit('GEMINI KEY REJECTED (%d): check GEMINI_API_KEY in the studio .env (scripts/check-gemini.sh). %s' % (code, msg))
+    if code == 429:
+        sys.exit('GEMINI LIMIT REACHED (429): the project\'s rate or daily limit for this model is used up. Wait and '
+                 'rerun, or see the limits at https://aistudio.google.com. %s' % msg)
+    if code == 404:
+        sys.exit('GEMINI NOT FOUND (404): check "model" in job.json (for example gemini-3.8-flash-tts), and that a custom '
+                 'voice ID belongs to the same Google project as the key (scripts/check-gemini.sh lists them). %s' % msg)
+    sys.exit('GEMINI ERR %s %s' % (code, msg))
 
 def run_ff(args, check=True):
     import subprocess

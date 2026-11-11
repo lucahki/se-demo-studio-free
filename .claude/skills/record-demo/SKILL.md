@@ -138,6 +138,31 @@ audition command prints its play commands; `--text <file>` uses a line of their 
   `python3 lib/audition.py --engine openrouter` (`Iapetus` and `Charon` on `google/gemini-3.8-flash-tts`, about
   1 cent each). Save as `"voice": {"engine": "openrouter", "model": "google/gemini-3.8-flash-tts", "name": "Iapetus",
   "budget_usd": 2}`; `budget_usd` caps this job's voice spend, and raising it needs their yes.
+- **Gemini** (Google AI Studio, their own key; free tier or paid). Offer it only when they say the local voices
+  are not good enough. Tell them plainly: the script text goes to Google; on the free tier it costs nothing (Google
+  AI Studio shows the daily limits); at paid-tier prices a 5-minute narration is about $0.07 and a 3-minute call
+  about $0.04 (both double from 2027-01-01). In the EU, Switzerland, and the UK, Google's paid-tier data terms
+  apply to the free tier too (the text is not used to improve Google's products); elsewhere, on the free tier,
+  Google may use the text and people may read it, so no confidential text. Walk them through the key
+  (references/SETUP.md "Gemini voice (optional, Google AI Studio)") and run `scripts/check-gemini.sh`; never ask
+  for the key in chat and never read `.env`. Then `python3 lib/audition.py --engine gemini [Iapetus Charon ...]
+  [--style "calm and assured"]`. If they made their own voices in Google AI Studio (Voice design), use their IDs
+  (`voice_...`, listed by `scripts/check-gemini.sh`; the key must come from the same Google project) as the name.
+  Save as `"voice": {"engine": "gemini", "model": "gemini-3.8-flash-tts", "name": ..., "style": "", "budget_usd": 2}`.
+
+**A conversation in the video** (for example a phone call between two people; INTERVIEW.md question 11b). Real
+people's recording, local voices, or Gemini. With voices, write the call as a file in `script/calls/<name>.txt`
+(`Name: line`, one turn per line, plus an optional `style:` line; format in `lib/dialogue.py`), amounts in words.
+Audition free with `python3 lib/audition.py --call --engine kokoro`, or with Gemini (two voices in one request, a
+far more natural exchange) with `python3 lib/audition.py --call --engine gemini [Kore+Puck Charon+Achird ...]`;
+`--text <file>` reads their own lines. Gemini's two voices react to each other only in one request, and Google
+allows only its 30 built-in voices there; a custom voice (`voice_...`) makes the call read line by line
+(`"mode": "per_line"`), without those reactions. Let them hear both before choosing (`Kore+Puck` against
+`voice_...+voice_...`); `scripts/check-gemini.sh --library it-IT` lists more Google voices for a language, which
+may or may not work in one request (try `--mode together`). The speakers in `"phone"` sound as if on the phone
+(`lib/phone.py`, free).
+Save as `"dialogue": {"engine": "gemini", "model": "gemini-3.8-flash-tts", "speakers": {"Anna": "Kore",
+"Paolo": "Puck"}, "style": "...", "phone": ["Paolo"], "budget_usd": 2}`; the narration keeps its own engine.
 
 Save the pick in job.json and in PROMPT.md's voice slot and "Owner decisions". Never use `--engine say` for a
 video: Apple licenses the macOS voices for personal, non-commercial use only (and `say` does not exist on Windows).
@@ -160,8 +185,10 @@ only the person's explicit "no" keeps them on. Then run `node capture/app.js --r
 - The person's words in the interview outrank these defaults; write every change into PROMPT.md's "Owner
   decisions".
 - Never type, read, or store passwords, one-time codes, cookies, or tokens.
-- Never call a paid or remote AI service (OpenRouter, OpenAI, or any other). Everything except Claude runs on this
-  computer. The one exception is the OpenRouter voice, through `lib/take.py` only, when the person picked it for this job.
+- Free and local first. Never call a paid or remote AI service (OpenRouter, Google, OpenAI, or any other).
+  Everything except Claude runs on this computer. The one exception is a remote voice the person picked for this
+  job with their own key in `.env` (the OpenRouter voice, or the Gemini voice for the narration or a call), through
+  `lib/take.py` only.
 - Never do tenant administration in a demo environment, except the specific changes the person allowed by name in
   the interview, each with its reset rule and logged; never touch another job's Chrome port.
 - Never record, screenshot, or keep a sign-in, SSO, password, or one-time-code page. If a raw frame or screenshot
@@ -181,5 +208,5 @@ only the person's explicit "no" keeps them on. Then run `node capture/app.js --r
 - references/PIPELINE.md: every toolkit command in order.
 - references/LESSONS_LEARNED.md: the history behind each rule's (L7) citation; not required reading.
 - references/CISCO_CLAIM_RULES.md: sourcing, wording, and branding for Cisco products.
-- references/MODELS.md: Claude, the three voice engines (Kokoro with its grades, Chatterbox, OpenRouter), and Whisper.
+- references/MODELS.md: Claude, the voice engines (Kokoro with its grades, Chatterbox, OpenRouter, Gemini), and Whisper.
 - examples/cloud-control-se-demo/ (studio root): a finished 5-minute demo, end to end.

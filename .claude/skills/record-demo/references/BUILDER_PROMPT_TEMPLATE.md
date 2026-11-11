@@ -263,13 +263,13 @@ and `engine.js` rarely need changes.
   storyboard's lines are a draft (L4).
 - Voice: the SE should sound like a person talking over a screen share, not a narrator reading copy. The owner
   chose the voice by ear before launch: {{VOICE FROM THE AUDITION, e.g. Kokoro am_michael at speed 1.0, or Chatterbox builtin at speed 0.94}}, saved
-  in job.json "voice" (its "engine" is kokoro, chatterbox, or openrouter). Record with `lib/take.py`, which uses
+  in job.json "voice" (its "engine" is kokoro, chatterbox, openrouter, or gemini). Record with `lib/take.py`, which uses
   that engine, and check every take's wording with `lib/stt.py` and `lib/check_take.py`. Kokoro: the same text and
   settings give an identical take, so to change a read, change the words, punctuation, or speed (it reads
   punctuation as pauses). Chatterbox: about 7 times slower than real time on an M1 Pro, so record the first full
   take early and redo only the paragraphs that need it (a take of just those paragraphs, joined with
   `build_voice.py segment=T2`); its reads vary run to run even with the same settings, so keep takes the owner
-  has heard. OpenRouter: paid per take (see Cost). You cannot hear audio: list
+  has heard. OpenRouter and Gemini: paid per take, or free on Gemini's free tier, always logged (see Cost). You cannot hear audio: list
   every line you are unsure of (product names, acronyms, numbers, anything `check_take.py` flags, since Whisper
   mishears some words, L24) in `review/LISTEN.md` with its time in `audio/voice.wav`, for the owner to play at
   the rough cut. Never use an `--engine say` take in the video (Apple licenses those voices for personal,
@@ -277,8 +277,12 @@ and `engine.js` rarely need changes.
 - Pronunciation lives in the speech text (L23): {{RESPELLINGS FOR THIS PRODUCT}}. Put the same pairs in job.json
   "respell" so captions show the written form. Put every product name in `review/LISTEN.md`. If a voice
   keeps saying a word wrong, reword the line (L23).
-- Never put directions in the spoken text (no engine here has a style field; each reads everything aloud); confirm with
-  `check_take.py` that no take reads one.
+- Never put directions in the spoken text (every engine reads everything aloud; only Gemini takes a short delivery
+  note, and only in job.json "style", apart from the text); confirm with `check_take.py` that no take reads one.
+- Calls: {{CONVERSATION ON SCREEN, e.g. none, or the phone call in script/calls/call.txt read by Gemini (Anna=Kore, Paolo=Puck, Paolo on the phone), placed after segment "order"}}.
+  Record it with `lib/take.py <name> --dialogue script/calls/<name>.txt` (settings in job.json "dialogue"), check
+  the wording differences it prints, and place it with `"call": "<name>"` on its segment in `script/segments.json`
+  (references/PIPELINE.md "Calls"). The call's lines go in `review/LISTEN.md` too.
 - Assemble with `lib/build_voice.py`; cut only at paragraph gaps (L25). Drive every cut, push-in, and chapter
   change from the resulting word timestamps, and make sure what the SE says matches what is on screen then (L5).
 - Music: none unless the owner supplied a track; if so, under the title and close only. Master to -16 LUFS
@@ -320,9 +324,10 @@ Print "FINAL READY:" with the video and player paths when done.
 ## Cost
 
 With a Kokoro or Chatterbox voice, nothing in this job spends money: the voice and Whisper run on this computer. With
-the OpenRouter voice, only `lib/take.py` spends, capped by job.json "voice" "budget_usd" and logged in
-`logs/costs.jsonl`; a BUDGET STOP means ask the owner before raising the cap. Never call OpenRouter for anything
-else, never call OpenAI or any other paid or remote AI service, and never add a key. Never read `.env`.
+the OpenRouter or Gemini voice (narration or call), only `lib/take.py` calls it, capped by `budget_usd` in job.json
+"voice" or "dialogue" and logged in `logs/costs.jsonl` (Gemini at paid-tier prices even on the free tier); a
+BUDGET STOP means ask the owner before raising the cap. Never call OpenRouter or Google for anything else, never
+call OpenAI or any other paid or remote AI service, and never add a key. Never read `.env`.
 
 ## Tools
 

@@ -2,14 +2,15 @@
 
 Every job folder (`jobs/<slug>/`) is a copy of `toolkit/job-template/`. Run commands from the job folder unless
 a path starts with `scripts/` (studio root). Nothing calls a paid or remote service: the voice and Whisper run
-on this computer, except `lib/take.py` when the owner picked the paid OpenRouter voice. This order was tested end to end on 2026-09-28, with the local voice and Whisper on 2026-10-19, and on Windows on 2026-10-28.
+on this computer, except `lib/take.py` when the owner picked a remote voice with their own key (OpenRouter, or
+Gemini for the narration or a call). This order was tested end to end on 2026-09-28, with the local voice and Whisper on 2026-10-19, and on Windows on 2026-10-28.
 
 ## 0. Configure the job
 
 `job.json`: `title`, `disclosure` (player page), `hours`, `chrome_port` (assigned by new-job.sh),
 `app_url` (landing page for new tabs), `app_match` (URL fragment of the product tab), `theme` (`light`, `dark`,
 or `null`), `respell` (spoken form to written form, e.g. `{"S D WAN": "SD-WAN"}`), `voice` (engine, voice, and speed, see
-step 3), `music` (see step 5), and `native` (a desktop app window to record, empty `app` for none; see "Native app
+step 3), `dialogue` (a call between two people, see step 3), `music` (see step 5), and `native` (a desktop app window to record, empty `app` for none; see "Native app
 windows" in step 1).
 
 ## 1. Browser, exploration, capture
@@ -194,7 +195,11 @@ instead of an address (`appLabel` in `build/story.js` frame to change it).
   reads one word with English pronunciation (Kokoro). Versions in another language: references/LOCALIZE.md.
 - `script/segments.json`: one entry per paragraph, same order: `name` (used in the edit), `gap` (seconds of
   silence after it, room for typing, loading, reading), `chapter` (player chapter label). Also `intro_seconds`
-  (silence before the first word, under the title) and `tail_seconds` (after the last word).
+  (silence before the first word, under the title) and `tail_seconds` (after the last word). A segment with
+  `"call": "<name>"` is followed by that call (step 3, "Calls"), then `call_gap` seconds (default 0.8).
+- `script/calls/<name>.txt` (only with a conversation on screen): one turn per line, `Anna: ...` /
+  `Paolo: ...`, plus an optional first line `style: a relaxed phone call between two colleagues`
+  (format in `lib/dialogue.py`; `**Anna:**` from a meeting script also works). Amounts in words.
 
 ## 3. Voice
 
@@ -203,8 +208,9 @@ instead of an address (`appLabel` in `build/story.js` frame to change it).
 | Narration language | job.json `"language"` (`en` default; `it`, `es`, `fr`, `pt`). take.py, audition.py, stt.py, captions, and the player follow it |
 | Install Chatterbox (once, only if picked) | `scripts/setup-chatterbox.sh` (root; about 3.5 GB); add `--multilingual` for another language (3.2 GB more) |
 | Check the OpenRouter key (only if picked) | `scripts/check-openrouter.sh` (root; prints usage and limit, never the key) |
+| Check the Gemini key (only if picked) | `scripts/check-gemini.sh [--library it-IT]` (root; free requests only: prints ok, the speech models, and the custom voices of the key's project with their IDs, never the key; `--library` also lists Google's Extended Voice Library for a language) |
 | Kokoro voices and grades | `python3 lib/audition.py --list` (the job's language) |
-| Audition (the owner picks by ear) | Kokoro: `python3 lib/audition.py [voice ...] [--text FILE] [--speed 1.0]`, then `python3 lib/play.py audio/audition/A_<voice>.wav`. Chatterbox: `python3 lib/audition.py --engine chatterbox [--speed 0.94]`. OpenRouter (paid): `python3 lib/audition.py --engine openrouter [Iapetus Charon ...]`. Each prints its play commands |
+| Audition (the owner picks by ear) | Kokoro: `python3 lib/audition.py [voice ...] [--text FILE] [--speed 1.0]`, then `python3 lib/play.py audio/audition/A_<voice>.wav`. Chatterbox: `python3 lib/audition.py --engine chatterbox [--speed 0.94]`. OpenRouter (paid): `python3 lib/audition.py --engine openrouter [Iapetus Charon ...]`. Gemini: `python3 lib/audition.py --engine gemini [Iapetus Charon ...] [--style S]`. A call: `python3 lib/audition.py --call [--engine kokoro\|gemini] [Kore+Puck ...] [--text FILE] [--phone Paolo\|none]`. Each prints its play commands |
 | Full take | `python3 lib/take.py T1` (engine, voice, and speed from job.json), or override: `python3 lib/take.py T2 af_heart --speed 0.95` |
 | Redo some paragraphs | put just those paragraphs in a file and `python3 lib/take.py T3 --text FILE`; `check_take.py T3` then lists the other paragraphs as unaligned, which is expected; join with `build_voice.py T1 segment=T3` |
 | Word timestamps | `python3 lib/stt.py audio/takes/T1.wav` (local Whisper large-v3-turbo, in the job's language; `--language it` overrides) |
@@ -218,10 +224,33 @@ job.json `"voice"` by engine (a job without `"engine"` is Kokoro):
 |---|---|---|
 | `kokoro` | `name` (`am_michael`), `speed` (1.0) | Free, on this computer, about 4 times faster than real time (Apple silicon or a Windows laptop CPU). No style field, only speed (0.5 to 2.0; 0.9 to 1.1 sounds natural). The same text and settings give a byte-identical take: to change a read, change the words, punctuation, or speed. |
 | `chatterbox` | `name` (`builtin`, or a reference clip's path in the job folder), `speed` (0.94), `seed` (1), `exaggeration` (0.5), `cfg_weight` (0.5) | Free, on a Mac (Mac GPU), about 7 times slower than real time on an M1 Pro. Not set up for Windows yet. Speed is a pitch-preserving stretch after the read. Lower `cfg_weight` (0.3) slows the pacing; higher `exaggeration` is more expressive but faster. Reads vary run to run even with the same seed. Paragraphs over 90 words are read in parts split at sentence ends (it stops after about 40 s per call). Every take carries an inaudible Perth watermark. |
+| `gemini` | `model` (`gemini-3.8-flash-tts`), `name` (`Iapetus`, any of the 30 built-in voices, or a custom voice ID `voice_...` from the key's Google project), `style` (`""`), `speed` (1.0), `budget_usd` (2) | The owner's Google AI Studio key in the studio `.env` (free tier, or paid); the whole text in one call (about $0.07 for 5 minutes at paid-tier prices, logged at that price in `logs/costs.jsonl` even on the free tier, stopped at `budget_usd`). `style` is a short delivery note sent apart from the text ("calm and assured"); keep it short, long ones make the voice drift. Speed is a stretch after the read. |
 | `openrouter` | `model` (`google/gemini-3.8-flash-tts`), `name` (`Iapetus`), `speed` (1.0), `budget_usd` (2) | Paid, from the owner's key in the studio `.env`; the whole text goes in one call (about $0.08 for 5 minutes), logged in `logs/costs.jsonl` and stopped at `budget_usd`. `Charon` suits ads better. Speed is a stretch after the read. |
 
 Kokoro, Chatterbox, and `say` read each paragraph on their own and join them with `--gap` seconds of silence
-(default 0.7), so cuts land in clean gaps; OpenRouter reads the text in one call and the cuts use its own pauses.
+(default 0.7), so cuts land in clean gaps; OpenRouter and Gemini read the text in one call and the cuts use their own pauses.
+
+### Calls (a conversation between two people)
+
+| Step | Command |
+|---|---|
+| Record a call | `python3 lib/take.py <name> --dialogue script/calls/<name>.txt` -> `audio/calls/<name>.wav` (with the phone filter), `<name>_raw.wav` (as read), `<name>_lines.json` (each line's speaker, text, and timing), `<name>.log`. It prints any wording difference per line (numbers written as digits by Whisper are not errors). Together: rerun to redo the whole call. Per line: a rerun asks Google again only for lines whose text or settings changed, or those named with `--redo 3,7`; the others stay exactly as approved. A word the voice misreads (it said "UVA" for "IVA") is written as said ("iva") with a job.json `"respell"` pair (`{"più iva": "più IVA"}`) so the captions show the written form |
+| Phone filter on any file | `python3 lib/phone.py IN.wav OUT.wav` (8 kHz, 400 to 3000 Hz, +4 dB at 1800 Hz, hard compression, light bit crush) |
+| Place it | `"call": "<name>"` on the segment it follows in `script/segments.json`, then `build_voice.py`: the narration has a silent hole for it, `cues.json` "calls" has its place and lines, `mix.py` plays it as its own layer (as loud as the narration, plus `level_db`), with the music ducked, and `deliver.py` captions each turn with the speaker's name. In `build/edit.py`, `CS('<name>')` / `CE('<name>')` (from `timeline`) give its start and end |
+
+job.json `"dialogue"`:
+
+| Field (default) | Meaning |
+|---|---|
+| `engine` (`gemini`) | `gemini`, or `kokoro`: free, each line read with its speaker's Kokoro voice, `gap` (0.35) seconds apart |
+| `mode` (`auto`) | Gemini only. `together`: the whole call in one request, the two voices reacting to each other (at most two speakers; Google allows only its 30 built-in voices there). `per_line`: one request per line, `gap` (0.35) seconds apart, which lets a custom voice ID speak, without the reactions. `auto`: together when every voice is built in, else per_line |
+| `model` (`gemini-3.8-flash-tts`) | Gemini only |
+| `speakers` | speaker name, as written in the call file -> voice: a Gemini voice (`"Charon"`, or a custom `"voice_..."`), or a Kokoro voice (`"im_nicola"`, or `{"name": "im_nicola", "speed": 1.1}`) |
+| `style` (`""`) | Gemini only: one short tone for the whole call, unless the call file has a `style:` line |
+| `phone` (`[]`) | the speakers who sound as if on the phone, only on their own lines |
+| `speed` (1.0) | Gemini only: a pitch-preserving stretch of the whole call |
+| `level_db` (0) | the call's loudness against the narration in the mix |
+| `budget_usd` (2) | Gemini only: stops when the job's total remote voice spend would pass it |
 `--engine say` (macOS voices, Mac only) is for drafts only: Apple licenses those voices for personal, non-commercial use.
 
 ## 4. Picture

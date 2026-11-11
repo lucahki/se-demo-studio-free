@@ -3,9 +3,13 @@
 # each join between takes prints its level step in dB next to the base take's step at the same place.
 # usage: python3 lib/build_voice.py BASE_TAKE [segment_name=OTHER_TAKE ...]  -> audio/voice.wav, build/cues.json
 # Pauses come from script/segments.json ("gap" after each segment); intro_seconds of silence precede the voice.
+# A call (a conversation recorded with lib/take.py NAME --dialogue ...) plays after a segment that has "call": "NAME":
+# after that segment and its gap, audio/voice.wav holds silence for the call's length, then "call_gap" seconds
+# (default 0.8) before the next segment. The call itself is its own layer, placed by lib/mix.py from cues.json "calls".
 import array, json, math, os, sys, wave
 from common import run_ff, JOB
 from speech import segments, paragraphs, ntok
+from dialogue import load_call
 SR = 48000
 cfg, SEGS = segments()
 INTRO = float(cfg.get('intro_seconds', 5.0)); TAIL = float(cfg.get('tail_seconds', 6.5))
@@ -69,10 +73,18 @@ for p in parts:
     for wd in p['words']:
         cues['words'].append({'w': wd['word'].strip(), 't': round(t + wd['start'] - p['cut0'], 3), 'e': round(t + wd['end'] - p['cut0'], 3), 'seg': s['name']})
     out.extend(seg); t += dur; gap = float(s.get('gap', .8)); out.extend(array.array('h', [0] * int(gap * SR))); t += gap
+    if s.get('call'):
+        L = load_call(JOB, s['call']); w = wave.open(os.path.join(JOB, L['wav'])); cd = w.getnframes() / w.getframerate(); w.close()
+        cues.setdefault('calls', []).append({
+            'name': s['call'], 'after': s['name'], 'wav': L['wav'], 't0': round(t, 3), 't1': round(t + cd, 3),
+            'lines': [{'speaker': l['speaker'], 'text': l['text'], 't': round(t + l['t'], 3), 'e': round(t + l['e'], 3)} for l in L['lines']],
+            'words': [{'w': x['word'].strip(), 't': round(t + x['start'], 3), 'e': round(t + x['end'], 3)} for x in L['words']]})
+        cg = float(s.get('call_gap', .8)); out.extend(array.array('h', [0] * (int(cd * SR) + int(cg * SR)))); t += int(cd * SR) / SR + int(cg * SR) / SR
 cues['voice_end'] = round(t, 3); cues['total'] = round(round((t + TAIL) * 30) / 30, 3)
 o = wave.open('audio/voice.wav', 'wb'); o.setnchannels(1); o.setsampwidth(2); o.setframerate(SR); o.writeframes(out.tobytes()); o.close()
 json.dump(cues, open('build/cues.json', 'w'), indent=1)
 for s in cues['segments']: print('%-12s %-14s g=%.2f %7.2f %7.2f' % (s['name'], s['take'], s['gain'], s['t0'], s['t1']))
+for c in cues.get('calls', []): print('call %-7s %-14s        %7.2f %7.2f' % (c['name'], 'after ' + c['after'], c['t0'], c['t1']))
 print('voice end %.2f  total %.2f s (%d frames)' % (t, cues['total'], round(cues['total'] * 30)))
 # edge check: each segment's first and last aligned words must match its script paragraph; a mismatch usually
 # means speech-to-text put a word into the gap and the cut dropped it (take that paragraph from another take)

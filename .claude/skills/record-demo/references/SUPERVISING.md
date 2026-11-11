@@ -91,8 +91,9 @@ Ask for approval or changes. Then append `STORYBOARD APPROVED` (with any changes
 - Go through `review/LISTEN.md` with the person: each line with its time in `audio/voice.wav` (they can play it
   with `python3 lib/play.py audio/voice.wav`, or in any media player). You cannot hear audio, so pronunciation and artifacts are their call; pass
   any rewording back to the builder.
-- With the OpenRouter voice only: the voice spend so far is the sum of `cost` in `logs/costs.jsonl`, against
-  job.json "voice" "budget_usd"; include it in the final report. Raise the cap only with the person's yes.
+- With a remote voice only (OpenRouter, or Gemini for the narration or a call): the voice spend so far is the sum
+  of `cost` in `logs/costs.jsonl` (Gemini lines are at paid-tier prices; on the free tier Google bills nothing),
+  against `budget_usd` in job.json "voice" or "dialogue"; include it in the final report. Raise the cap only with the person's yes.
 
 ## Final report to the person
 

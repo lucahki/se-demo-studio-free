@@ -23,6 +23,8 @@ $PYTHON - > "$TMP/leaks" <<'PY' || ran_badly leaks
 import os, re, subprocess
 PATTERNS = [
     ("OpenRouter or OpenAI style key", r"(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}"),
+    ("Google API key", r"\bAIza[0-9A-Za-z_-]{35}(?![0-9A-Za-z_-])"),
+    ("Google API key (AQ. form, seen from AI Studio on 2026-11-11)", r"(?<![A-Za-z0-9])AQ\.[A-Za-z0-9_-]{40,}"),
     ("GitHub token", r"\b(?:gh[po]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,})"),
     ("AWS access key", r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
     ("AWS secret key", r"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Za-z0-9/+]{40}"),

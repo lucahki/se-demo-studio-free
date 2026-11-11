@@ -32,3 +32,21 @@ else
 fi
 winpath() { if [ $PLATFORM = windows ]; then cygpath -w "$1"; else printf '%s\n' "$1"; fi; }
 filesize() { wc -c < "$1" | tr -d ' '; }
+# env_value NAME: the value of NAME=... in the studio .env, read as plain text (never run as shell code, so a stray
+# line can never be printed in an error). Empty when missing. Never echo what it returns.
+env_value() {
+  [ -f .env ] || return 0
+  awk -v k="$1" '{ sub(/\r$/, "") }
+    $0 ~ "^[[:space:]]*" k "[[:space:]]*=" { sub(/^[^=]*=[[:space:]]*/, ""); v = $0 }
+    END { sub(/[[:space:]]+$/, "", v); gsub(/^["\047]|["\047]$/, "", v); printf "%s", v }' .env
+}
+# env_layout NAME: a hint, by line number only (never the line's content), when .env holds a line that is not a
+# comment, blank, or NAME=value, for example a key pasted on its own line below its name.
+env_layout() {
+  [ -f .env ] || return 0
+  awk -v k="$1" '{ sub(/\r$/, "") }
+    /^[[:space:]]*(#|$)/ { next }
+    /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=/ { name = $0; sub(/[[:space:]]*=.*/, "", name); sub(/^[[:space:]]*/, "", name); last = name; lastnr = NR; next }
+    { if (last == k && lastnr == NR - 1) printf "line %d of .env looks like the key on its own line: put it right after %s= on the same line, with no space\n", NR, k
+      else printf "line %d of .env is not NAME=value (the line is not shown here); fix or delete it\n", NR }' .env
+}

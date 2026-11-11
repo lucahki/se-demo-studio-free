@@ -9,6 +9,8 @@
 #   intro_boost_db = louder music while it plays alone before the first word, easing down over 0.8 s just before it
 #              (default 9; 11 was picked by ear)
 #   end_slide_seconds = length of the closing fade (default: from just after the last word to the end)
+# A call (cues.json "calls", from build_voice.py) is its own layer at its place: the same voice chain, its loudness
+# matched to the narration's plus job.json "dialogue" "level_db" (default 0), and the music stays ducked under it.
 # The music fades in over 2 s. Give it a lead-in with script/segments.json "intro_seconds" (bed.json "beat_near_3s"
 # puts the first word on a beat).
 # usage: python3 lib/mix.py out/mix.wav [--from S --to S]   (a window renders an excerpt, e.g. the agenda sample)
@@ -23,7 +25,9 @@ C = json.load(open('build/cues.json')); TOT = C['total']; SR = 48000; n = int(ro
 M = job_config().get('music') or {}
 LVL = float(M.get('level_db', -20)); DUCK = float(M.get('duck_db', -6)); BOOST = float(M.get('intro_boost_db', 9));
 E_io = lambda k: np.where(k < .5, 4 * k ** 3, 1 - (-2 * k + 2) ** 3 / 2)
-END = float(M['end_slide_seconds']) if 'end_slide_seconds' in M else max(1.5, TOT - C['words'][-1]['e'] - .15)   # fade out after the last word
+CALLS = C.get('calls', [])
+LAST = max([C['words'][-1]['e']] + [c['t1'] for c in CALLS])
+END = float(M['end_slide_seconds']) if 'end_slide_seconds' in M else max(1.5, TOT - LAST - .15)   # fade out after the last word
 def read(path, ch=1, filt=None):
     args = [FF, '-v', 'error', '-i', path] + (['-af', filt] if filt else []) + ['-ac', str(ch), '-ar', str(SR), '-f', 'f32le', '-']
     y = np.frombuffer(subprocess.run(args, capture_output=True, check=True).stdout, np.float32)
@@ -38,11 +42,12 @@ def lufs(y):   # integrated loudness (EBU R128, gated) of a mono or stereo float
         if line.strip().startswith('I:'): return float(line.split()[1])
     return float('nan')
 # voice: same chain as the studio's mix
-vo = fit(read('audio/voice.wav', 1, 'highpass=f=70,equalizer=f=220:t=q:w=1:g=-1.5,equalizer=f=3200:t=q:w=1.2:g=1.5,'
-                                   'acompressor=threshold=-21dB:ratio=2.5:attack=5:release=120:makeup=2.5dB'))
+VOICE = ('highpass=f=70,equalizer=f=220:t=q:w=1:g=-1.5,equalizer=f=3200:t=q:w=1.2:g=1.5,'
+         'acompressor=threshold=-21dB:ratio=2.5:attack=5:release=120:makeup=2.5dB')
+vo = fit(read('audio/voice.wav', 1, VOICE))
 # speech mask from the word timings: phrases merged across pauses shorter than 0.8 s
 sp = []
-for w in C['words']:
+for w in sorted(C['words'] + [l for c in CALLS for l in c['lines']], key=lambda x: x['t']) if CALLS else C['words']:
     if sp and w['t'] - sp[-1][1] < 1.2: sp[-1][1] = max(sp[-1][1], w['e'])   # hold the duck through gaps under 1.2 s (no pumping)
     else: sp.append([w['t'], w['e']])
 t = np.arange(n) / SR; mask = np.zeros(n, np.float32); R = .35
@@ -71,7 +76,14 @@ if os.path.exists('build/sfx_events.json'):
     for name, ts, gn in json.load(open('build/sfx_events.json')):
         s = read('audio/sfx/%s.wav' % name) * gn * 10 ** (-6 / 20); o = int(ts * SR); e = min(n, o + len(s))
         if o < n: fx[o:e] += s[:e - o]
-mix = mus + (vo + fx)[:, None]
+cl = np.zeros(n, np.float32)
+if CALLS:
+    Lvo = lufs(vo); CL = float((job_config().get('dialogue') or {}).get('level_db', 0))
+    for c in CALLS:
+        y = read(c['wav'], 1, VOICE); y = y * 10 ** ((Lvo + CL - lufs(y)) / 20)   # the call as loud as the narration
+        o = int(c['t0'] * SR); e = min(n, o + len(y))
+        if o < n: cl[o:e] += y[:e - o]
+mix = mus + (vo + fx + cl)[:, None]
 # master: integrated -16 LUFS, then a peak limiter at -1.5 dBTP
 Lm = lufs(mix); mix = mix * 10 ** ((-16 - Lm) / 20)
 i0, i1 = int(a.t0 * SR), int((a.t1 or TOT) * SR)

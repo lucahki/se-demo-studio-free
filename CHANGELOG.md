@@ -3,6 +3,27 @@
 What changed in each studio version, newest first. Your version is in the `VERSION` file and on the first line
 that `scripts/setup.sh` prints.
 
+## Unreleased (branch gemini-voice)
+
+- Free first, a remote voice when the local ones are not good enough. New voice engine `gemini`: Google's
+  `gemini-3.8-flash-tts`, called with the person's own Google AI Studio key in `.env` (free tier, or paid at about
+  $0.07 for a 5-minute narration). Only `lib/take.py` calls it; `scripts/check-gemini.sh` checks the key without
+  printing it; every call is logged in `logs/costs.jsonl` at paid-tier prices and stopped at `budget_usd`.
+- Calls between two people: a call script in `script/calls/<name>.txt` (`Anna: ...` / `Paolo: ...` plus an
+  optional `style:` line), read with `lib/take.py <name> --dialogue ...` by Gemini (both voices in one request) or
+  by Kokoro (free, line by line); settings in job.json `"dialogue"`. Local Whisper times each line and lists
+  wording differences. `lib/audition.py --call` auditions voice pairs with an Italian or English sample.
+- Custom voices made in Google AI Studio work by their ID (`voice_...`), for the narration and in calls. Google
+  lets only its built-in voices share one two-speaker request, so a call with a custom voice is read one line per
+  request (`"mode": "per_line"`). A rerun asks again only for the lines that changed or are named with
+  `--redo 3,7`, so the approved lines stay as they are; call captions follow job.json `"respell"`. `scripts/check-gemini.sh` lists the key's custom voices, and with `--library it-IT`
+  Google's Extended Voice Library for a language.
+- `lib/phone.py`: a free phone-line filter, applied only to the speakers in `"dialogue"` `"phone"`.
+- `"call": "<name>"` on a segment plays the call after it: the narration leaves a hole, `lib/mix.py` plays the call
+  as its own layer with the music ducked, and the captions name each speaker. Jobs without calls give the same
+  files as before (tested byte for byte with Kokoro, Chatterbox, the voice build, mix, captions, and player).
+- The repo check also looks for Google API keys.
+
 ## Unreleased (branch native-app-recording)
 
 - A demo can show a desktop app window, such as the Webex app, as well as the Chrome tab (macOS only). Set

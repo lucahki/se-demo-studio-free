@@ -49,8 +49,9 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
   Without it, the builder runs in a second terminal window.
 - No paid services and no API keys by default. The voice (Kokoro, or Chatterbox if you pick it) and word timing
   (Whisper) run on your computer, music is optional and only a track you supply, and Claude does the frame reviews
-  itself. Claude usage comes from your Claude plan. If you have your own OpenRouter account, you can pick its
-  paid voice instead (see "Choosing a voice" below).
+  itself. Claude usage comes from your Claude plan. Free first: only if the local voices are not good enough, you
+  can pick a remote voice with your own key, the paid OpenRouter voice or Google's Gemini voice (free tier or
+  paid), for the narration or for a two-person call (see "Choosing a voice" below).
 - A demo environment: a Cisco dCloud instant demo, a partner or Cisco lab, or your own sandbox with fictional
   data. Never a customer's tenant or production system. You sign in yourself, once, in a separate Chrome window
   Claude opens for the job; Claude looks around your environment in that same window. Claude never records
@@ -62,7 +63,8 @@ First time? Say **do a test run**. About 5 to 10 minutes, free.
 
 - **Anthropic (Claude):** everything Claude reads while it works, including the product screens it explores, page
   text, screenshots, and the files in the job folder.
-- **Nothing else**, unless you pick the paid OpenRouter voice: then the script text goes to OpenRouter. With
+- **Nothing else**, unless you pick a remote voice: the OpenRouter voice sends the script text to OpenRouter, the
+  Gemini voice sends the script or call text to Google. With
   Kokoro or Chatterbox, the voice and word timing run on your computer. Setup downloads the tools once, from PyPI,
   GitHub, and Hugging Face.
 - This is why the studio is for demo environments with fictional data only.
@@ -105,7 +107,7 @@ Compared with the original studio, this one needs no OpenRouter account and spen
 | Music | Generated beds | None by default; optionally your own track |
 | Reviews and listening checks | OpenRouter models | Claude reads the frames itself; you do the listening |
 | AI caller | ChatGPT voice mode | Removed |
-| Spend caps | Per job and per key | Only with the OpenRouter voice: a per-job voice cap (`budget_usd`, default $2) and the key's own limit |
+| Spend caps | Per job and per key | Only with a remote voice: a per-job cap (`budget_usd`, default $2) and, for OpenRouter, the key's own limit |
 
 The tools are free, and their licenses allow use in a work demo: Kokoro model Apache-2.0; kokoro-onnx, ONNX
 Runtime, MLX, mlx-whisper, faster-whisper, CTranslate2, and the Whisper weights MIT. Kokoro uses espeak-ng and phonemizer (GPL-3.0) for
@@ -122,6 +124,11 @@ The interview asks which voice engine to use, then you pick the voice by ear:
 | Kokoro (default) | Free, on your computer | A 4-minute script in about a minute, on either | Best voices are female (`af_heart` A); male voices grade C+ |
 | Chatterbox | Free, on your Mac (not yet on Windows) | About 30 minutes per full take of a 4-minute script | One built-in voice, read 6% slower by default. Installed the first time a job picks it (`scripts/setup-chatterbox.sh`, about 3.5 GB). MIT license; every take carries an inaudible AI watermark |
 | OpenRouter | Paid, your own account (about $0.08 for 5 minutes) | Seconds | `google/gemini-3.8-flash-tts`, voice Iapetus, as in the original studio. Your key goes in `.env` (see `.env.example`), never in the chat; the script text leaves your computer |
+| Gemini | Your own Google AI Studio key: free tier within daily limits, or paid (about $0.07 for 5 minutes, double from 2027) | Seconds | The same Google model, called directly. Also reads a two-person call in one go with two voices and a plain-language tone, the most natural option for a conversation on screen. Voices you made yourself in Google AI Studio work too, by their ID (in a call they are read line by line, a Google limit). Your key goes in `.env`, never in the chat; check it with `scripts/check-gemini.sh`; the text goes to Google |
+
+**A conversation on screen** (for example a phone call): write it as `Name: line` lines in `script/calls/`, read
+it with Kokoro (free) or Gemini, and put one speaker "on the phone" with a free filter on your computer
+(`lib/phone.py`). The call plays as its own layer between narration scenes, with captions that name the speaker.
 
 ## License
 

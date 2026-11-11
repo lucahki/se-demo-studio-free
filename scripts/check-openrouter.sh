@@ -5,8 +5,9 @@ cd "$(dirname "$0")/.."
 . scripts/platform.sh
 EDIT=".env, then open -e .env"; [ $PLATFORM = windows ] && EDIT=".env, then notepad .env"
 [ -f .env ] || { echo "OpenRouter key          NOT SET: no .env file yet (cp .env.example .env && chmod 600 $EDIT)"; exit 1; }
-( set -a; . ./.env; set +a
-  [ -z "${OPENROUTER_API_KEY:-}" ] && { echo "OpenRouter key          NOT SET in .env"; exit 1; }
+# read as plain text (scripts/platform.sh), never run: running .env printed a stray line once (2026-11-11)
+( OPENROUTER_API_KEY=$(env_value OPENROUTER_API_KEY)
+  [ -z "${OPENROUTER_API_KEY:-}" ] && { echo "OpenRouter key          NOT SET in .env (OPENROUTER_API_KEY=)"; env_layout OPENROUTER_API_KEY; exit 1; }
   R=$("${CURL[@]}" -s -m 20 -w '\n%{http_code}' https://openrouter.ai/api/v1/key -H "Authorization: Bearer $OPENROUTER_API_KEY")
   CODE=$(echo "$R" | tail -1); BODY=$(echo "$R" | sed '$d')
   if [ "$CODE" != "200" ]; then echo "OpenRouter key          REJECTED (HTTP $CODE): check the key in .env"; exit 1; fi

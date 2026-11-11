@@ -105,6 +105,45 @@ It receives the script text (and the voice provider behind it does too). Walk th
 Never read `.env` yourself (the studio settings deny it); `lib/take.py` loads the key on its own. Each job caps
 its voice spend with job.json "voice" "budget_usd" (default $2).
 
+## Gemini voice (optional, Google AI Studio)
+
+Only for someone who picks it (the narration, or a two-speaker call) after hearing that the local voices are not
+good enough; nothing else in the studio uses Google. It receives the script text. Explain each step simply, one
+at a time; it needs only a Google account, no developer setup:
+
+1. **Open Google AI Studio** at https://aistudio.google.com and sign in with a Google account they are allowed to
+   use for work (a personal one if their company has no rule against it). Accept the terms the first time.
+2. **Create the key**: in the left menu choose **Get API key** (or go to https://aistudio.google.com/apikey), then
+   **Create API key**. If it asks for a project, let it create a new one (or pick the project that holds their own
+   voices). The key is one long line (it started with `AQ.` on 2026-11-11; older keys start with `AIza`). Copy it;
+   do not paste it anywhere else.
+3. **Free or paid.** The new key starts on the free tier: no card, and the speech model is free within daily
+   limits that AI Studio shows for the project. Only if they hit the limits and want more, they can link a billing
+   account in AI Studio (paid tier, about $0.07 for a 5-minute narration, $0.04 for a 3-minute call, double from
+   2027-01-01); each job still stops at its own `budget_usd`. Data: in the EU, Switzerland, and the UK, Google's
+   paid-tier terms apply to the free tier too (the text is not used to improve Google's products and is kept only
+   for a limited time to detect abuse); elsewhere, on the free tier, Google may use the text and people may read
+   it, so keep confidential text out.
+4. **Save it in the studio `.env`, never in the chat.** If there is no `.env` yet, they run
+   `cp .env.example .env && chmod 600 .env`, then `open -e .env` (TextEdit; on Windows `notepad .env`), paste the
+   key right after `GEMINI_API_KEY=` on the same line, with no spaces or quotes, and save. A key on its own line
+   is not read (`check-gemini.sh` says so by line number, never showing the line). If they paste the key into the chat anyway, tell
+   them to delete it in AI Studio (the key's menu, Delete) and create a new one.
+5. **Verify** with `scripts/check-gemini.sh`. It makes free requests only and prints ok, the speech models the key
+   can use, and the custom voices of the key's project with their IDs, never the key. REJECTED means the key is
+   wrong or was deleted; LIMIT REACHED means wait (free tier).
+
+**Their own voices from AI Studio.** Voices made in AI Studio (Voice design or remixing, IDs starting `voice_`)
+belong to the Google project they were made in: in step 2 they create the key in that same project, and
+`check-gemini.sh` then lists them. A voice unused for a year is deleted. A voice replicated from a real person's
+recording needs that person's recorded consent (Google asks for it), and the video must not pass it off as that
+person. Custom voices work for the narration; in a call they make each line its own request (PIPELINE.md "Calls").
+
+Never read `.env` yourself (the studio settings deny it); `lib/take.py` loads the key on its own. Each job caps
+its spend with `budget_usd` in job.json "voice" and "dialogue" (default $2), counted at paid-tier prices even on
+the free tier. Google adds an inaudible SynthID watermark to its generated audio (stated for its audio models;
+the speech page does not repeat it).
+
 ## Native app capture (optional, macOS)
 
 Only for a job that records a desktop app window, such as the Webex app (job.json `"native"`,

@@ -15,11 +15,14 @@ This folder is a studio for recording narrated virtual SE product demos from a l
 - Demo environments with fictional data only (dCloud, a lab, or the person's own sandbox). Never a customer's
   tenant or production system: its screens would go to Anthropic. A desktop app (such as the Webex app) is
   recorded only while signed in with a demo identity, never the person's everyday account.
-- This copy is the free, local mode (git branch `free-local`). The voice (Kokoro, or Chatterbox when picked) and
-  word timing (Whisper) run on this computer, music is only a track the person supplies, and Claude does the frame
-  reviews itself. One exception: the narration voice may go through OpenRouter (paid) when the person explicitly
-  picks it for a job and has put their own key in `.env`; only `lib/take.py` calls it. Never call OpenRouter for
-  anything else, never call OpenAI or any other paid or remote AI service, and never add one during a job.
+- This copy is the free, local mode (git branch `free-local`). Free and local first: the voice (Kokoro, or
+  Chatterbox when picked) and word timing (Whisper) run on this computer, music is only a track the person
+  supplies, and Claude does the frame reviews itself. A remote voice is offered only when the person says the local
+  voices are not good enough, with a plain word on what leaves the computer and what it costs: the OpenRouter voice
+  (paid) or the Google Gemini voice (Google AI Studio, free tier or paid), for the narration or for a two-speaker
+  call. It is used only when the person picks it for a job and has put their own key in `.env`, and only
+  `lib/take.py` calls it. Never call OpenRouter or Google for anything else, never call OpenAI or any other paid
+  or remote AI service, and never add one during a job.
 - Work for a job stays in `jobs/<slug>/`. Do not modify `toolkit/`, `examples/`, or `.claude/` during a job;
   improvements to the studio itself are a separate task the person asks for.
 - Learner- and customer-facing copy: no em dashes, no slogan stacks, plain and specific.

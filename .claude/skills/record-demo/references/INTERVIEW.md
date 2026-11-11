@@ -21,8 +21,8 @@ for a yes.
    site. Customer environments are not allowed: if the answer is a customer's tenant or production system, say
    so plainly and help them pick a demo environment instead. Also tell them, before the job is created, what
    leaves their computer: Claude sees the product screens, page text, and the job's files. The voice and word
-   timing run on their computer, so the narration audio goes nowhere else, unless they pick the paid OpenRouter voice
-   (question 11), which sends the script text to OpenRouter.
+   timing run on their computer, so the narration audio goes nowhere else, unless they pick a remote voice
+   (questions 11 and 11b): the paid OpenRouter voice sends the script text to OpenRouter, the Gemini voice to Google.
    If it is their own environment (a sandbox or lab they built), create the job right away and do your
    reconnaissance in the job's Chrome (SKILL.md Steps 2 and 3), so they sign in once and the facts you check land
    in INTERVIEW.md.
@@ -68,14 +68,26 @@ for a yes.
       (`af_heart` A); the best male voices only grade C+.
     - **Chatterbox**: free, on a Mac, a more natural read with one built-in voice. Slow: about 30 minutes
       per full take of a 4-minute script on an M1 Pro, and the first use downloads about 3.5 GB. Not set up
-      for Windows yet: on Windows, offer Kokoro and OpenRouter only.
+      for Windows yet: on Windows, offer Kokoro, OpenRouter, and Gemini only.
     - **OpenRouter**: paid from their own OpenRouter account (about $0.08 for a 5-minute script), and the script
       text leaves their computer. Only for someone who already has, or wants, an account and a key.
+    - **Gemini**: Google's voice, called with their own Google AI Studio key (free tier with daily limits, no card;
+      about $0.07 for a 5-minute script at paid-tier prices, double from 2027). The script text goes to Google.
+      Offer it only when they find the local voices not good enough (free first).
     They pick the actual voice by ear in a short audition before the build (SKILL.md Step 4).
     Language: English by default; Italian, Spanish, French, or Brazilian Portuguese are supported (job.json
     `"language"`). In another language, Kokoro has one or two voices per language (Italian `im_nicola`, `if_sara`, grade
     C), Chatterbox needs its multilingual model (3.2 GB more), and English product names get respellings that they
     confirm by ear. A finished job in another language follows references/LOCALIZE.md instead of a new recording.
+11b. **A conversation on screen** (only when a scene has one, for example a phone call or a meeting the product
+    listens to). Who speaks it:
+    - **Real people** recording their own lines (most natural; they need a quiet room and their consent).
+    - **Local voices** (free): Kokoro, one voice per speaker, read line by line. Honest about it: in tests on
+      2026-11-11 a local two-voice call still sounded like a narrator reading, not two people talking.
+    - **Gemini** (their Google AI Studio key): both speakers in one request with two distinct voices and a
+      plain-language tone such as "a relaxed phone call between two colleagues". At most two speakers;
+      about $0.04 for a 3-minute call at paid-tier prices, free on the free tier; the call text goes to Google.
+    Ask which speaker, if any, should sound as if on the phone (a free filter on this computer).
 12. **Time and music.** The time limit (default 4 hours) and when they need it by. Music: none by default; if
     they want some, they supply a track they have the rights to.
 

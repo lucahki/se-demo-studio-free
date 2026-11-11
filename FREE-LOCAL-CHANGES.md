@@ -275,3 +275,25 @@ Tested with the test run on a Windows 11 laptop (Intel Core i7-13800H, CPU only)
 a second run downloaded nothing; Kokoro read the 44.6 s script in 12 s; faster-whisper timed all 119 words in 26 s
 with no wording differences; `edge check: ok`; the 8-chunk render of the 55 s video took 97 s; captions and player
 completed. The test run's narration now says "on this computer" instead of "on this Mac".
+
+## 12. Later change: Gemini voices and two-speaker calls (2026-11-11)
+
+The principle, in the owner's words: "Use free services as much as possible, but a paid option can be offered when
+the free option is not good enough." Kokoro stays the default and Chatterbox the free alternative. Prompted by a
+demo with a phone call between two people, where every local voice tried sounded like a narrator reading.
+
+| Part | What it does |
+|---|---|
+| Engine `gemini` (`lib/take.py`) | Google's `gemini-3.8-flash-tts`, called with the person's own Google AI Studio key (`GEMINI_API_KEY` in `.env`, read by `lib/common.py`, never printed). The narration in one request, with an optional short `style`. Facts checked on Google's pages on 2026-11-11 are in `references/MODELS.md` |
+| Calls (`lib/take.py --dialogue`, `lib/dialogue.py`) | A call script with one `Name: line` turn per line, read by Gemini with two voices in one request (at most two speakers) or by Kokoro line by line (free). Local Whisper times each line |
+| Custom voices | A custom voice ID (`voice_...`) from the key's Google project works for the narration and in calls; Google lets only built-in voices share one two-speaker request, so a call with one is read line by line (`"mode": "per_line"`). `scripts/check-gemini.sh` lists them |
+| Phone filter (`lib/phone.py`) | Free, on this computer: 8 kHz, 400 to 3000 Hz, +4 dB at 1800 Hz, hard compression, light bit crush, level-matched, only on the chosen speakers' lines |
+| Placing a call | `"call"` on a segment: `build_voice.py` leaves a hole and writes `cues.json` "calls"; `mix.py` plays the call as its own layer, as loud as the narration, with the music ducked; `deliver.py` captions each turn with the speaker's name; `timeline.py` has `CS()` / `CE()` |
+| Spend | Every Gemini request is logged in `logs/costs.jsonl` at paid-tier prices (even on the free tier) and stopped by `budget_usd` in job.json "voice" or "dialogue" |
+| Checks | `scripts/check-gemini.sh` (one free request); `scripts/check-repo.sh` also looks for Google API keys |
+
+Tested on 2026-11-11 on an M1 Pro Mac: with no call in the job, a Kokoro take, a Chatterbox take, and the voice build,
+mix, captions, and player were byte-identical to the files made before the change. A Kokoro call in English and
+Italian: lines timed, one speaker's lines alone on the phone (energy above 3.5 kHz removed, level unchanged), the call
+in the mix at -16.0 LUFS next to narration at -15.8, captions per speaker turn. The Gemini request and the budget
+stop were tested with a stand-in reply; the request matched Google's REST example.
