@@ -24,6 +24,9 @@ def read_call(path):
         m = LINE.match(s)
         if not m:
             raise SystemExit('%s line %d is not "Speaker: text": %r' % (path, n, s[:80]))
+        if not tokens(spoken(m.group(2))):
+            raise SystemExit('%s line %d has no words, only a sound such as <laugh>: put the sound at the start or end '
+                             'of a line with words, so Whisper can time it and the captions show it.' % (path, n))
         lines.append((m.group(1).strip(), m.group(2).strip()))
     if not lines:
         raise SystemExit('%s has no "Speaker: text" lines.' % path)

@@ -49,7 +49,8 @@ for c in C.get('calls', []):
             caps.append((t0, max(tm[g[-1]][1], t0 + .8), wrap(('%s: ' % l['speaker'] if k == 0 else '') + words), 1))
 caps.sort(key=lambda x: x[0])
 # a call caption ends before the next caption starts (two speakers never share the screen)
-caps = [(c[0], min(c[1], caps[i + 1][0] - .04) if len(c) > 3 and i + 1 < len(caps) else c[1], c[2]) for i, c in enumerate(caps)]
+# (never before it starts: chunks of a turn Whisper missed all share one start time)
+caps = [(c[0], max(c[0] + .04, min(c[1], caps[i + 1][0] - .04)) if len(c) > 3 and i + 1 < len(caps) else c[1], c[2]) for i, c in enumerate(caps)]
 srt, vtt = [], ['WEBVTT', '']
 for k, (t0, t1, words) in enumerate(caps, 1):
     srt.append('%d\n%s --> %s\n%s\n' % (k, fmt(t0), fmt(t1), words)); vtt += ['%s --> %s' % (fmt(t0, '.'), fmt(t1, '.')), words, '']

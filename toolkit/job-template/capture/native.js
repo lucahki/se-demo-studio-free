@@ -1,15 +1,17 @@
 // Record and drive a native macOS app window (for example the Webex desktop app) next to the Chrome tab.
-// Settings come from job.json "native": { "app": "Webex", "size": [1440, 810], "mode": "app" }
-//   app   the app's name or bundle id (Webex is "Cisco-Systems.Spark")
-//   size  optional window size in points (16:9); by default the largest of 1920x1080, 1600x900, 1440x810,
-//         1280x720 that fits the display the window is on
-//   mode  "app" (default: all of the app's windows, cropped to the main window, so menus and pop-ups show) or
-//         "window" (only the main window)
+// Settings come from job.json "native": { "app": "Webex", "size": [1440, 810], "mode": "app", "anchor": "center" }
+//   app     the app's name or bundle id (Webex is "Cisco-Systems.Spark")
+//   size    optional window size in points (16:9); by default the largest of 1920x1080, 1600x900, 1440x810,
+//           1280x720, 1120x630 that fits the display the window is on
+//   mode    "app" (default: all of the app's windows, cropped to the main window, so menus and pop-ups show) or
+//           "window" (only the main window)
+//   anchor  "center" (default) or "bottom-right": the window in the display's bottom-right corner, so Webex's
+//           incoming-call toast, which opens there, is inside the recorded area
 // The helper (capture/native/nativecap.swift) is compiled here on first use. Coordinates are frame pixels: the
 // app window mapped to 1920x1080, the same space as Chrome takes, the edit, the camera, and redaction.
 // Unlike a Chrome tab, this moves the real pointer and types on the real keyboard: hands off the mouse and
 // keyboard while it runs. A click is refused if another app's window covers the point, and typing is refused
-// unless the app is in front.
+// unless the app is in front. A scroll is refused like a click.
 const { spawn, execFileSync } = require('child_process');
 const crypto = require('crypto'); const fs = require('fs'); const path = require('path'); const readline = require('readline');
 const JOB = path.resolve(__dirname, '..');
@@ -49,7 +51,7 @@ async function open(opts = {}) {
     if ('id' in args || 'op' in args) return reject(new Error(`helper call ${op}: "id" and "op" are reserved`));   // they would hide the reply
     const id = next++; waiting.set(id, { resolve, reject }); p.stdin.write(JSON.stringify({ id, op, ...args }) + '\n');
   });
-  const close = async () => { if (!dead) { try { p.stdin.end(); } catch (e) {} } await new Promise(r => { if (p.exitCode !== null) r(); else p.on('exit', r); }); };
+  const close = async () => { if (!dead) { try { p.stdin.end(); } catch (e) {} } await new Promise(r => { if (p.exitCode !== null || p.signalCode !== null) r(); else p.on('exit', r); }); };   // signalCode: a crashed helper
   await call('check');   // fails here if the app is not running
   return { call, close };
 }
@@ -64,7 +66,9 @@ async function ready(h) {
     await h.close(); process.exit(4);
   }
   const size = NAT.size || [];
-  return h.call('prep', size.length === 2 ? { w: size[0], h: size[1] } : {});
+  const args = size.length === 2 ? { w: size[0], h: size[1] } : {};
+  if (NAT.anchor) args.anchor = NAT.anchor;   // "bottom-right": see prep in nativecap.swift
+  return h.call('prep', args);
 }
 
 // Take helpers for the app, the same shape as rec.js has for a Chrome tab. log gets cursor and marks; every move,

@@ -98,9 +98,12 @@ mark('owner_done');
 
 A story can also show a desktop app, such as the Webex app, next to or instead of the Chrome tab. Set job.json
 `"native": {"app": "Webex"}` (the app's name or bundle id; Webex is `Cisco-Systems.Spark`). Optional: `"size":
-[1440, 810]` (window size in points, 16:9; by default the largest of 1920x1080, 1600x900, 1440x810, 1280x720
-that fits its display) and `"mode": "window"` (only the main window; the default `"app"` captures all of the
-app's windows cropped to the main window, so its menus, pop-ups, and call windows show and other apps do not).
+[1440, 810]` (window size in points, 16:9; by default the largest of 1920x1080, 1600x900, 1440x810, 1280x720,
+1120x630 that fits its display), `"mode": "window"` (only the main window; the default `"app"` captures all of the
+app's windows cropped to the main window, so its menus, pop-ups, and call windows show and other apps do not),
+and `"anchor": "bottom-right"` (the window goes in the bottom-right corner of the display's free area instead of
+the center; use it when the story shows an incoming Webex call, so the call toast opens inside the recorded area
+where Webex puts it and the take answers it there without moving it).
 
 | Step | Command |
 |---|---|
@@ -116,14 +119,15 @@ How it differs from a Chrome tab:
 
 - It needs Screen Recording and Accessibility for the terminal app that runs Claude Code (references/SETUP.md
   "Native app capture"). The helper `capture/native/nativecap.swift` is compiled on first use (about 30 s).
-- Every run first brings the app to the front and sizes its main window to 16:9, centered on its display.
+- Every run first brings the app to the front and sizes its main window to 16:9, centered on its display (or
+  bottom-right with `"anchor"`).
   Coordinates are frame pixels: the window mapped to 1920x1080, the same space as Chrome takes, `shot()`
   pictures (1920x1080), the camera, and REDACT. Put the window on a Retina display; at 1x a push-in looks soft
   (rec_app.js prints a NOTE).
 - It moves the real pointer and types on the real keyboard. Tell the owner before every run that clicks or
-  types, and ask them to keep hands off the mouse and keyboard until it prints the frame count. A click is refused
-  when another app's window covers the point, and typing is refused unless the app is in front, so a take stops
-  rather than click or type into another app. Turn on Do Not Disturb (macOS Focus) for the takes: other apps'
+  types, and ask them to keep hands off the mouse and keyboard until it prints the frame count. A click or scroll
+  is refused when another app's window covers the point, and typing is refused unless the app is in front, so a
+  take stops rather than click, scroll, or type into another app. Turn on Do Not Disturb (macOS Focus) for the takes: other apps'
   notifications are not recorded in `"app"` mode, but a banner over the app blocks clicks under it.
 - There is no DOM. `text()` returns the app's visible text from its accessibility tree (the twin of `dtext()`),
   `find(/label/, role)` returns matching elements with their 1920x1080 boxes, and `clickText(/label/, { role })`
@@ -139,7 +143,8 @@ How it differs from a Chrome tab:
 - The sign-in guard reads the accessibility tree: a sign-in address in an embedded web view, a password field, an
   email-first step, or a sign-in window title or heading stops the take as in Chrome (exit 2 before, exit 3 with the
   raw frames deleted during). Without the Accessibility permission it cannot check, so it refuses to start. Exit 5
-  means the window moved or changed size mid-take: rerun it.
+  (rec_app.js and rec.js --app) means the window moved or changed size mid-take: rerun it. Exit 1 with CAPTURE
+  ERROR (APP CAPTURE ERROR in rec.js) means the app recording stopped on its own and the clip is cut short: rerun it.
 - The app must be signed in with a demo identity (a dCloud or lab user, a sandbox org), never the owner's everyday
   account: its spaces, contacts, and messages would be recorded and sent to Anthropic in frame reviews.
 
@@ -159,12 +164,17 @@ console.log('OWNER ACTION NEEDED: place the call now');
 mark('owner_wait'); let a; while (!(a = await answerBtn())) await sleep(700); mark('ringing');
 const inside = (b, w) => b.x >= w.x && b.y >= w.y && b.x + b.w <= w.x + w.w && b.y + b.h <= w.y + w.h;
 const toast = (await windows()).find(w => !w.main && inside(a, w));
-if (toast) await place(toast.id, [1920 - toast.w - 40, 90]);            // fully in view, top right
+if (toast) await place(toast.id, [1920 - toast.w - 40, 90]);            // fully in view, top right (skip with "anchor")
 await sleep(2500); a = (await answerBtn()) || a; await click(a.x + a.w / 2, a.y + a.h / 2, 900); mark('answered');
 let e; while (!(e = await endBtn())) await sleep(1000); mark('connected');
 const call = (await windows()).find(w => !w.main && w.w > 300 && inside(e, w));
 if (call) await place(call.id);           // the call window over the recorded area, filling it
 ```
+
+To show the toast where Webex opens it, bottom right of the display, instead of moving it: set job.json
+`"native": {"anchor": "bottom-right", ...}`, leave out the `place(toast...)` line, and stop with OWNER DECISION
+NEEDED if the toast or its answer button is outside 0..1920 by 0..1080 (tested on the Webex app, 2026-11-12: the
+toast opened inside the frame at bottom right and was answered there).
 
 What the test showed: the toast opens on the display where the pointer is, and `place` cannot move it to another
 display, so keep the pointer on the app window while waiting (hands off). If `a` is outside 0..1920 by 0..1080
@@ -242,12 +252,12 @@ job.json `"dialogue"`:
 
 | Field (default) | Meaning |
 |---|---|
-| `engine` (`gemini`) | `gemini`, or `kokoro`: free, each line read with its speaker's Kokoro voice, `gap` (0.35) seconds apart |
+| `engine` (`kokoro`) | `kokoro`: free, on this computer, each line read with its speaker's Kokoro voice, `gap` (0.35) seconds apart; or `gemini`, only when the owner picked it for this job (the call text goes to Google) |
 | `mode` (`auto`) | Gemini only. `together`: the whole call in one request, the two voices reacting to each other (at most two speakers; Google allows only its 30 built-in voices there). `per_line`: one request per line, `gap` (0.35) seconds apart, which lets a custom voice ID speak, without the reactions. `auto`: together when every voice is built in, else per_line |
 | `model` (`gemini-3.8-flash-tts`) | Gemini only |
 | `speakers` | speaker name, as written in the call file -> voice: a Gemini voice (`"Charon"`, or a custom `"voice_..."`), or a Kokoro voice (`"im_nicola"`, or `{"name": "im_nicola", "speed": 1.1}`) |
 | `style` (`""`) | Gemini only: one short tone for the whole call, unless the call file has a `style:` line |
-| `phone` (`[]`) | the speakers who sound as if on the phone, only on their own lines |
+| `phone` (`[]`) | the speakers who sound as if on the phone, only on their own lines (a list, or one name; a name that is not a speaker in the call stops with a message) |
 | `speed` (1.0) | Gemini only: a pitch-preserving stretch of the whole call |
 | `level_db` (0) | the call's loudness against the narration in the mix |
 | `budget_usd` (2) | Gemini only: stops when the job's total remote voice spend would pass it |

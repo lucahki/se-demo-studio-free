@@ -11,8 +11,9 @@
 // Recording uses ScreenCaptureKit without the real cursor (the render draws the logged pointer path). In "app"
 // mode (default) every window of the app is captured, cropped to the main window, so its menus, pop-ups, and
 // call windows show and other apps' windows over it do not. "window" mode captures only the main window.
-// Input goes through real mouse and keyboard events: a click is refused when another app's window covers the
-// point, and typing is refused when the app is not in front, so a take can never click or type into another app.
+// Input goes through real mouse and keyboard events: a click or scroll is refused when another app's window covers
+// the point, and typing is refused when the app is not in front, so a take can never click, scroll, or type into
+// another app.
 // Needs Screen Recording and Accessibility for the terminal app that runs it (System Settings, Privacy & Security).
 import AppKit
 import ApplicationServices
@@ -175,8 +176,13 @@ final class Target {
     }
     Thread.sleep(forTimeInterval: 0.6)
   }
-  // Bring the app to the front and size its main window to 16:9, centered on the display it is on.
-  func prep(_ w: Double?, _ h: Double?) throws -> [String: Any] {
+  // Bring the app to the front and size its main window to 16:9, centered on the display it is on, or with
+  // anchor "bottom-right" in the free area's bottom-right corner (where Webex opens its incoming-call toast,
+  // so the toast is inside the recorded area).
+  func prep(_ w: Double?, _ h: Double?, _ anchor: String = "center") throws -> [String: Any] {
+    guard anchor == "center" || anchor == "bottom-right" else {
+      throw Fail("unknown \"anchor\" \"\(anchor)\" in job.json native: use \"center\" or \"bottom-right\"")
+    }
     activate(); try refresh()
     let d = displayFor(win), vis = visibleArea(d)
     let sizes: [(Double, Double)] = w != nil && h != nil ? [(w!, h!)] : [(1920, 1080), (1600, 900), (1440, 810), (1280, 720), (1120, 630)]
@@ -191,6 +197,7 @@ final class Target {
       return abs(f1.minX - win.minX) + abs(f1.minY - win.minY) + abs(f1.width - win.width) < abs(f2.minX - win.minX) + abs(f2.minY - win.minY) + abs(f2.width - win.width)
     }) else { throw Fail("cannot reach \(name)'s window through Accessibility") }
     var pos = CGPoint(x: (vis.minX + (vis.width - size.0) / 2).rounded(), y: (vis.minY + (vis.height - size.1) / 2).rounded())
+    if anchor == "bottom-right" { pos = CGPoint(x: (vis.maxX - size.0).rounded(), y: (vis.maxY - size.1).rounded()) }
     var sz = CGSize(width: size.0, height: size.1)
     for _ in 0..<2 {   // some apps apply position and size in either order; twice settles both
       AXUIElementSetAttributeValue(axw, kAXSizeAttribute as CFString, AXValueCreate(.cgSize, &sz)!)
@@ -210,9 +217,11 @@ final class Target {
   }
   // frame pixels (1920x1080) <-> global screen points
   func toScreen(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: win.minX + x * win.width / 1920, y: win.minY + y * win.height / 1080) }
+  // each axis on its own, as in toScreen: the 16:9 check in prep allows a window 1% off, and the clip is scaled
+  // to 1920x1080 on both axes
   func toFrame(_ r: CGRect) -> [Double] {
-    let k = 1920 / win.width
-    return [Double((r.minX - win.minX) * k), Double((r.minY - win.minY) * k), Double(r.width * k), Double(r.height * k)].map { ($0 * 10).rounded() / 10 }
+    let kx = 1920 / win.width, ky = 1080 / win.height
+    return [Double((r.minX - win.minX) * kx), Double((r.minY - win.minY) * ky), Double(r.width * kx), Double(r.height * ky)].map { ($0 * 10).rounded() / 10 }
   }
   // what would receive a click at this point: the front-most visible window that contains it
   // The Dock (and some other system processes) keep a window over the whole display that is transparent except for
@@ -252,11 +261,11 @@ final class Target {
   func place(_ id: CGWindowID, _ box: [Double]?) throws -> [String: Any] {
     guard let w = appWindows().first(where: { $0.id == id }) else { throw Fail("no \(name) window with id \(id) on screen") }
     guard let axw = axWindow(w.frame) else { throw Fail("cannot reach that \(name) window through Accessibility, so it cannot be moved") }
-    let k = win.width / 1920, b = box ?? [0, 0, 1920, 1080]
-    var pos = CGPoint(x: win.minX + b[0] * k, y: win.minY + b[1] * k)
-    if b.count == 4 { var sz = CGSize(width: b[2] * k, height: b[3] * k); AXUIElementSetAttributeValue(axw, kAXSizeAttribute as CFString, AXValueCreate(.cgSize, &sz)!) }
+    let kx = win.width / 1920, ky = win.height / 1080, b = box ?? [0, 0, 1920, 1080]
+    var pos = CGPoint(x: win.minX + b[0] * kx, y: win.minY + b[1] * ky)
+    if b.count == 4 { var sz = CGSize(width: b[2] * kx, height: b[3] * ky); AXUIElementSetAttributeValue(axw, kAXSizeAttribute as CFString, AXValueCreate(.cgSize, &sz)!) }
     AXUIElementSetAttributeValue(axw, kAXPositionAttribute as CFString, AXValueCreate(.cgPoint, &pos)!)
-    if b.count == 4 { var sz = CGSize(width: b[2] * k, height: b[3] * k); AXUIElementSetAttributeValue(axw, kAXSizeAttribute as CFString, AXValueCreate(.cgSize, &sz)!) }
+    if b.count == 4 { var sz = CGSize(width: b[2] * kx, height: b[3] * ky); AXUIElementSetAttributeValue(axw, kAXSizeAttribute as CFString, AXValueCreate(.cgSize, &sz)!) }
     AXUIElementPerformAction(axw, kAXRaiseAction as CFString)
     Thread.sleep(forTimeInterval: 0.3)
     guard let n = appWindows().first(where: { $0.id == id }) else { throw Fail("the window closed while it was being moved") }
@@ -408,8 +417,10 @@ final class Input {
     for d in [true, false] { let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: d); e?.flags = flags; e?.post(tap: .cghidEventTap) }
   }
   // dy > 0 scrolls down (the content moves up), as page.mouse.wheel does in Chrome takes; in frame pixels
+  // the scroll goes to whatever is under the pointer, so it is refused where another window covers it, as a click is
   func scroll(_ dy: Double, _ dx: Double) throws {
     try front()
+    if let other = t.coveredBy(pos) { throw Fail("scroll refused: \(other) is in front of \(t.name) at the pointer") }
     let k = t.win.width / 1920
     CGEvent(scrollWheelEvent2Source: src, units: .pixel, wheelCount: 2, wheel1: Int32((-dy * k).rounded()), wheel2: Int32((-dx * k).rounded()), wheel3: 0)?.post(tap: .cghidEventTap)
   }
@@ -424,7 +435,7 @@ func serve(_ target: Target) {
     let op = m["op"] as? String ?? ""
     switch op {
     case "check": return permissions(prompt: false)
-    case "prep": return try target.prep(num(m, "w"), num(m, "h"))
+    case "prep": return try target.prep(num(m, "w"), num(m, "h"), (m["anchor"] as? String) ?? "center")
     case "window": return target.info()
     case "windows":
       return ["windows": target.appWindows().map { w -> [String: Any] in let f = target.toFrame(w.frame)

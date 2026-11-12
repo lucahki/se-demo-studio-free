@@ -12,7 +12,8 @@ EDIT=".env, then open -e .env"; [ $PLATFORM = windows ] && EDIT=".env, then note
 # read as plain text (scripts/platform.sh), never run: running .env printed a stray line once (2026-11-11)
 ( GEMINI_API_KEY=$(env_value GEMINI_API_KEY)
   [ -z "${GEMINI_API_KEY:-}" ] && { echo "Gemini key              NOT SET in .env (GEMINI_API_KEY=)"; env_layout GEMINI_API_KEY; exit 1; }
-  R=$("${CURL[@]}" -s -m 20 -w '\n%{http_code}' "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000" -H "x-goog-api-key: $GEMINI_API_KEY")
+  # the key header goes in on stdin (-H @-, printf is a shell builtin), so it never shows in the process list
+  R=$(printf 'x-goog-api-key: %s\n' "$GEMINI_API_KEY" | "${CURL[@]}" -s -m 20 -w '\n%{http_code}' "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000" -H @-)
   RC=$?; CODE=$(echo "$R" | tail -1); BODY=$(echo "$R" | sed '$d')
   if [ $RC -ne 0 ] || [ "$CODE" = "000" ]; then echo "Gemini key              NO CONNECTION: could not reach Google (network or proxy)"; exit 1; fi
   case "$CODE" in
@@ -31,7 +32,7 @@ else: print('%-24s works, but gemini-3.8-flash-tts is not listed for it (speech 
   voices() {   # voices <title> <query...>: one line per voice, id first
     local Q=(-G "https://generativelanguage.googleapis.com/v1beta/voices" --data-urlencode "page_size=1000")
     for q in "${@:2}"; do Q+=(--data-urlencode "$q"); done
-    local V; V=$("${CURL[@]}" -s -m 20 -w '\n%{http_code}' "${Q[@]}" -H "x-goog-api-key: $GEMINI_API_KEY")
+    local V; V=$(printf 'x-goog-api-key: %s\n' "$GEMINI_API_KEY" | "${CURL[@]}" -s -m 20 -w '\n%{http_code}' "${Q[@]}" -H @-)
     local VC; VC=$(echo "$V" | tail -1)
     if [ "$VC" != "200" ]; then printf '%-24s could not list them (HTTP %s)\n' "$1" "$VC"; return; fi
     echo "$V" | sed '$d' | $PYTHON -c "

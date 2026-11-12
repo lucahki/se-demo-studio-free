@@ -8,6 +8,8 @@
 // Screencast frames arrive only when the page changes; lib/build_clips.py resamples to a steady 30 fps.
 // There is no real cursor in the capture: the pointer path is logged here and drawn in the render.
 // Sign-in pages are never recorded: it refuses to start on one (exit 2) and deletes a take that reaches one (exit 3).
+// With --app, as in rec_app.js: exit 4 a macOS permission is missing, exit 5 the app window moved during the take,
+// exit 1 with APP CAPTURE ERROR the app recording stopped on its own (its clip is cut short).
 const C = require('./cdp'); const fs = require('fs'); const path = require('path');
 (async () => {
   const name = process.argv[2]; const body = require(path.resolve(process.argv[3]));
@@ -29,9 +31,10 @@ const C = require('./cdp'); const fs = require('fs'); const path = require('path
   }
   fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
   // if a sign-in page appears mid-take: stop, delete this take's raw frames, log the deletion, and exit
-  let aborted = false;
+  let aborted = false, moved = '';
   const guard = async () => { if (aborted) return; let why = await C.signInReason(page);
-    if (!why && h && !appBusy) { appBusy = true; const c = await N.check(h).catch(() => ({})); appBusy = false; if (c.signin) why = appLog.app + ': ' + c.signin; }   // one app check at a time
+    if (!why && h && !appBusy) { appBusy = true; const c = await N.check(h).catch(() => ({})); appBusy = false; if (c.signin) why = appLog.app + ': ' + c.signin;   // one app check at a time
+      if (c.moved && !moved) { moved = c.moved; console.log(`WINDOW MOVED: ${appLog.app}'s window moved during take ${name} (${c.moved}), so its clicks are off. Rerun it; nothing else needs to change.`); } }
     if (!why || aborted) return; aborted = true;
     await cdp.send('Page.stopScreencast').catch(() => {}); fs.rmSync(dir, { recursive: true, force: true });
     if (h) { await h.call('stop').catch(() => {}); fs.rmSync(appDir, { recursive: true, force: true }); }
@@ -75,13 +78,15 @@ const C = require('./cdp'); const fs = require('fs'); const path = require('path
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: Number(process.env.JPGQ || 90), maxWidth: 3840, maxHeight: 2160, everyNthFrame: 1 });
   mark('start');
   try { await body({ page, C, mv, click, clickLoc, type, typed, wheel, mark, sleep, cdp, dtext, cur: () => cur, app: AD }); } catch (e) { console.log('TAKE SCRIPT ERROR', e.message); }
-  mark('end'); await sleep(500); await guard(); clearInterval(guardTimer);
+  // the last check runs in full: wait for an app check still running instead of skipping it
+  mark('end'); await sleep(500); clearInterval(guardTimer); while (appBusy) await sleep(50); await guard();
   await cdp.send('Page.stopScreencast');
   fs.writeFileSync(path.join(dir, 'log.json'), JSON.stringify(log));
+  let appFailed = false;
   if (h) { const r = await h.call('stop'); await h.close(); appLog.frames = r.frames; fs.writeFileSync(path.join(appDir, 'log.json'), JSON.stringify(appLog));
-    if (r.error) console.log('APP CAPTURE ERROR', r.error);
+    if (r.error) { appFailed = true; console.log(`APP CAPTURE ERROR: the app recording stopped on its own (${r.error}); its clip is cut short. Rerun the take.`); }
     console.log(name + '_app', 'frames', r.frames.length, 'window', appLog.window.px.join('x')); }
   console.log(name, 'frames', n, 'secs', ((Date.now() - t0) / 1000).toFixed(1));
   console.log('check it: python3 lib/recsheet.py', name, '5 15 30 45 60');
-  process.exit(0);
-})();
+  process.exit(appFailed ? 1 : moved ? 5 : 0);
+})().catch(e => { console.log('ERROR', e.message); process.exit(1); });

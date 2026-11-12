@@ -79,6 +79,11 @@ def gemini_speech(model, parts, speech_config):
     t_out = int(u.get('candidatesTokenCount') or round(len(pcm) / 2 / SR * 25))   # 25 audio tokens per second
     return pcm, gemini_cost(model, t_in, t_out), {'in': t_in, 'out': t_out}
 
+def gemini_voice(v):
+    # a built-in voice in Google's documented form (prebuiltVoiceConfig); a custom voice ID (voice_..., tested
+    # 2026-11-12 in a per-line call) as "voice"
+    return {'prebuiltVoiceConfig': {'voiceName': v}} if v in GEMINI_VOICES else {'voice': v}
+
 def stretch(pcm, speed):
     # pitch-preserving speed change of 16-bit 24 kHz mono PCM
     with tempfile.TemporaryDirectory() as tmp:
@@ -98,7 +103,8 @@ if a.dialogue:
     from speech import respell
     from phone import on_phone
     D = dict(job_config().get('dialogue') or {})
-    engine = a.engine or D.get('engine', 'gemini')
+    # free and local unless the owner picked Gemini for this job (job.json "dialogue" "engine", or --engine gemini)
+    engine = a.engine or D.get('engine', 'kokoro')
     if engine not in ('gemini', 'kokoro'):
         raise SystemExit('A call is read with the gemini or kokoro engine (job.json "dialogue" "engine"), not %r.' % engine)
     style0, lines = read_call(a.dialogue)
@@ -109,7 +115,14 @@ if a.dialogue:
     if [n for n in names if n not in voices]:
         raise SystemExit('No voice for speaker(s) %s: add them to job.json "dialogue" "speakers" (or --speakers Name=Voice).'
                          % ', '.join(n for n in names if n not in voices))
-    phone = [p for p in (D.get('phone') or [])] if a.phone is None else [p for p in a.phone.split(',') if p and p != 'none']
+    if engine == 'gemini' and [n for n in names if not isinstance(voices[n], str)]:
+        raise SystemExit('With the gemini engine each speaker in job.json "dialogue" "speakers" is a voice name or ID, '
+                         'such as "Anna": "Kore"; {"name": ..., "speed": ...} is the Kokoro form.')
+    ph = D.get('phone') or []
+    phone = ([ph] if isinstance(ph, str) else list(ph)) if a.phone is None else [p for p in a.phone.split(',') if p and p != 'none']
+    if [p for p in phone if p not in names]:
+        raise SystemExit('"phone" names %s, but the speakers in this call are %s.'
+                         % (', '.join(p for p in phone if p not in names), ', '.join(names)))
     out_dir = a.dir or 'audio/calls'; os.makedirs(out_dir, exist_ok=True)
     LANG = language(); t = time.time(); info = {}; bounds = None
     if engine == 'gemini':
@@ -124,8 +137,8 @@ if a.dialogue:
             raise SystemExit('Gemini reads at most two speakers in one request; this call has %d (%s). Use --mode per_line.'
                              % (len(names), ', '.join(names)))
         if mode == 'together':
-            # built-in names in the documented form; anything else (to try an Extended Voice Library ID) as "voice"
-            voice_of = lambda n: {'prebuiltVoiceConfig': {'voiceName': voices[n]}} if voices[n] in GEMINI_VOICES else {'voice': voices[n]}
+            if a.redo: print('note: --redo applies to --mode per_line; together reads the whole call again', flush=True)
+            voice_of = lambda n: gemini_voice(voices[n])
             if len(names) == 2:
                 cfg = {'multiSpeakerVoiceConfig': {'speakerVoiceConfigs': [{'speaker': n, 'voiceConfig': voice_of(n)} for n in names]}}
             else:
@@ -155,7 +168,7 @@ if a.dialogue:
                     print('gemini: line %d/%d (%s)' % (i + 1, len(lines), sp), flush=True)
                     p1 = {'text': part['text']}
                     if style: p1['speech_metadata'] = {'style': style}
-                    one, c1, u1 = gemini_speech(model, [p1], {'voiceConfig': {'voice': voices[sp]}})
+                    one, c1, u1 = gemini_speech(model, [p1], {'voiceConfig': gemini_voice(voices[sp])})
                     log_cost(model, 'call %s line %d (%s=%s)' % (a.name, i + 1, sp, voices[sp]), c1)
                     write_wav(pf, one); idx[str(i + 1)] = key; json.dump(idx, open(ip, 'w'), indent=1, ensure_ascii=False)
                     cost += c1 or 0; usage = {'in': usage['in'] + u1['in'], 'out': usage['out'] + u1['out']}
@@ -322,8 +335,7 @@ elif engine == 'gemini':
     check_budget()
     part = {'text': '\n\n'.join(paras)}
     if style: part['speech_metadata'] = {'style': style}
-    # "voice" takes a built-in name or a custom voice ID (aistudio.google.com/docs/speech-generation, single speaker)
-    pcm, cost, usage = gemini_speech(model, [part], {'voiceConfig': {'voice': voice}})
+    pcm, cost, usage = gemini_speech(model, [part], {'voiceConfig': gemini_voice(voice)})
     out += pcm
     log_cost(model, 'voice %s (%s)' % (a.name, voice), cost)
     info.update(model=model, style=style, cost=cost, tokens=usage, paid=True)

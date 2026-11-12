@@ -4,7 +4,7 @@
 # with their own key: OpenRouter (job.json "voice" engine "openrouter") or Google Gemini (engine "gemini", for the
 # narration or for a call in job.json "dialogue"). Only lib/take.py calls them.
 # Runs on macOS and Windows; WINDOWS marks the few places that differ.
-import json, os, platform, subprocess, sys, time
+import json, os, platform, re, subprocess, sys, time
 
 WINDOWS = os.name == 'nt'
 
@@ -106,15 +106,20 @@ def env_key(name):
     env = os.path.join(STUDIO, '.env')
     hint = ''
     if os.path.exists(env):
+        # read as scripts/platform.sh env_value does, so scripts/check-*.sh test the same key that is used here:
+        # spaces around "=" allowed, and the last NAME= line wins
         lines = [l.strip() for l in open(env)]
+        found = None
         for i, line in enumerate(lines):
-            if line.startswith(name + '='):
-                k = line.split('=', 1)[1].strip().strip('"').strip("'")
-                if k:
-                    return k
-                nxt = lines[i + 1] if i + 1 < len(lines) else ''
-                if nxt and not nxt.startswith('#') and '=' not in nxt.split()[0]:   # never shown: it may be the key
-                    hint = ' Line %d of .env looks like the key on its own line: put it right after %s= on the same line.' % (i + 2, name)
+            m = re.match(r'%s\s*=(.*)$' % re.escape(name), line)
+            if not m:
+                continue
+            found = m.group(1).strip().strip('"').strip("'")
+            nxt = lines[i + 1] if i + 1 < len(lines) else ''
+            if not found and nxt and not nxt.startswith('#') and '=' not in nxt.split()[0]:   # never shown: it may be the key
+                hint = ' Line %d of .env looks like the key on its own line: put it right after %s= on the same line.' % (i + 2, name)
+        if found:
+            return found
     sys.exit('%s is not set. Put it in the studio .env (see .env.example), never in chat.%s' % (name, hint))
 
 def api_key():

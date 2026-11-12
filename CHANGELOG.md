@@ -3,6 +3,24 @@
 What changed in each studio version, newest first. Your version is in the `VERSION` file and on the first line
 that `scripts/setup.sh` prints.
 
+## Unreleased (fixes from a review before publishing, 2026-11-12)
+
+- A call is read with the free local Kokoro voice unless the job picks Gemini (`"dialogue"` `"engine"`); it used to
+  default to Gemini, which sent the call text to Google whenever a key was in `.env`.
+- Built-in Gemini voices are sent in Google's documented form (`prebuiltVoiceConfig`) for the narration and per-line
+  calls too, as together mode already did; custom voice IDs are sent as before.
+- The `.env` key is read the same way by `lib/take.py` and `scripts/check-*.sh` (spaces around `=`, last line
+  wins), so a key check that passes means the voice uses that key. The check scripts no longer put the key on
+  curl's command line, where other programs on the computer could see it.
+- A call line with only a sound tag (`Paolo: <laugh>`) stops with a clear message instead of crashing the captions;
+  `"phone": "Paolo"` (one name, not a list) works, and a misspelled name stops; a Kokoro-style speaker with the
+  gemini engine stops with a message; `--redo` in together mode says it does nothing there; a call caption can
+  no longer end before it starts.
+- Native app takes: the last sign-in check always runs in full; `rec.js --app` exits 5 when the app window moved
+  and 1 when the app recording stopped on its own, as `rec_app.js` now does too; a scroll is refused where
+  another window covers the pointer, as a click is; frame coordinates use each axis on its own for a window
+  slightly off 16:9; closing a crashed helper no longer hangs; `rec.js` prints `ERROR` instead of a stack trace.
+
 ## Unreleased (branch gemini-voice)
 
 - Free first, a remote voice when the local ones are not good enough. New voice engine `gemini`: Google's
@@ -38,6 +56,9 @@ that `scripts/setup.sh` prints.
 - Pop-up windows such as an incoming-call toast and a call window: `windows()`, `waitWindow()`, and `place()` bring
   them into the recorded area, and `find`, `clickText`, and `text` can look outside it. PIPELINE.md has an incoming call
   recipe, tested on the Webex app.
+- job.json `"native"` `"anchor": "bottom-right"` puts the app window in the display's bottom-right corner instead of
+  the center, so Webex's incoming-call toast opens inside the recorded area and is answered where Webex puts it,
+  without moving it. Any other value stops with a message. Added after a demo job in November 2026.
 - Clean-up: at the end of a job that recorded a desktop app, the studio turns the terminal's Screen Recording and
   Accessibility back to how they were before the job (`node capture/app.js --revoke`), unless the person says no.
 - Over an app clip the frame bar shows the app's name instead of an address. `rec_marks()` in `lib/common.py`

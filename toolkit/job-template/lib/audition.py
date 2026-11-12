@@ -73,7 +73,7 @@ PY = 'python' if os.name == 'nt' else 'python3'
 if a.call:
     from dialogue import read_call, speakers_of
     D = job_config().get('dialogue') or {}
-    engine = a.engine or D.get('engine', 'gemini')
+    engine = a.engine or D.get('engine', 'kokoro')   # free and local unless Gemini was picked
     if engine not in ('gemini', 'kokoro'): sys.exit('A call audition uses --engine gemini or --engine kokoro.')
     os.makedirs('audio/audition', exist_ok=True)
     txt = a.text

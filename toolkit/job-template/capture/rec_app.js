@@ -10,6 +10,7 @@
 // This moves the real pointer and keyboard: the owner keeps hands off until it prints the frame count.
 // Sign-in screens are never recorded: it refuses to start on one (exit 2) and deletes a take that reaches one
 // (exit 3). Exit 4: a macOS permission is missing. Exit 5: the window moved, so the take's clicks are off.
+// Exit 1 with CAPTURE ERROR: the recording stopped on its own, so the clip is cut short.
 const N = require('./native'); const fs = require('fs'); const path = require('path');
 (async () => {
   const name = process.argv[2]; const body = require(path.resolve(process.argv[3]));
@@ -41,10 +42,11 @@ const N = require('./native'); const fs = require('fs'); const path = require('p
   const api = new Proxy(D, { get: (o, k) => typeof o[k] === 'function' && !['mark', 'sleep', 'cur'].includes(k)
     ? async (...a) => { if (stop) throw new Error('take stopped: ' + stop); return o[k](...a); } : o[k] });
   try { await body({ app: api, ...api }); } catch (e) { console.log('TAKE SCRIPT ERROR', e.message); }
-  D.mark('end'); await N.sleep(500); clearInterval(guardTimer); await guard();
+  // the last check runs in full: wait for one still running instead of skipping it, so the last seconds are checked
+  D.mark('end'); await N.sleep(500); clearInterval(guardTimer); while (busy) await N.sleep(50); await guard();
   const r = await h.call('stop'); await h.close();
   log.frames = r.frames; fs.writeFileSync(path.join(dir, 'log.json'), JSON.stringify(log));
-  if (r.error) console.log('CAPTURE ERROR', r.error);
+  if (r.error) { console.log(`CAPTURE ERROR: the recording stopped on its own (${r.error}); the clip is cut short. Rerun the take.`); process.exit(1); }
   if (r.dropped) console.log(`note: ${r.dropped} frames dropped while the disk caught up`);
   console.log(name, 'frames', r.frames.length, 'secs', ((Date.now() / 1000 - log.t0)).toFixed(1), 'window', win.px.join('x'));
   console.log('check it: python3 lib/recsheet.py', name, '5 15 30 45 60');
