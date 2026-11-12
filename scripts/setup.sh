@@ -79,8 +79,10 @@ else
 fi
 [ -x $PY ] && $PY -c "import kokoro_onnx, $WHISPER_PKG" 2>/dev/null && say "local tools (Python $($PY -c 'import platform; print(platform.python_version())'))" "ok" || { say "local tools" "BROKEN: delete toolkit/.venv and rerun scripts/setup.sh"; ok=0; }
 [ -x toolkit/.venv-chatterbox/$VENV_BIN/python$EXE ] && [ -f toolkit/models/chatterbox/t3_cfg.safetensors ] && say "Chatterbox voice (optional)" "installed" || say "Chatterbox voice (optional)" "not installed; only for jobs that pick it (scripts/setup-chatterbox.sh)"
-# native app window capture (job.json "native"): macOS only, built with the Swift compiler from the Command Line Tools
+# native app window capture (job.json "native"): built per job with the Swift compiler from the Command Line Tools
+# (macOS) or the C# compiler that comes with Windows (.NET Framework 4)
 if [ $PLATFORM = mac ]; then command -v swiftc >/dev/null && say "Native app capture (optional)" "ready; the permissions are checked per job (node capture/app.js --permissions)" || say "Native app capture (optional)" "needs the Command Line Tools: xcode-select --install; only for jobs that record a desktop app"; fi
+if [ $PLATFORM = windows ]; then { [ -f "$WINDIR/Microsoft.NET/Framework64/v4.0.30319/csc.exe" ] || [ -f "$WINDIR/Microsoft.NET/Framework/v4.0.30319/csc.exe" ]; } && say "Native app capture (optional)" "ready; no permissions to turn on" || say "Native app capture (optional)" "needs .NET Framework 4.8 (Windows Features, .NET Framework 4.8 Advanced Services); only for jobs that record a desktop app"; fi
 command -v pdftotext >/dev/null && say "pdftotext (optional)" "ok" || say "pdftotext (optional)" "not installed; PDF sources will not fetch ($GET_POPPLER)"
 if [ $PLATFORM = windows ]; then say "NodeTerm" "not checked on Windows; the builder runs in a second terminal window"
 else [ -f "$HOME/Library/Application Support/node-terminal/canvas-control/nodeterm.sh" ] && say "NodeTerm" "ok" || say "NodeTerm" "not found (recommended: https://nodeterm.dev); without it the builder runs in a second Terminal window"; fi

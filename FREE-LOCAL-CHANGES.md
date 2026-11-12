@@ -269,6 +269,7 @@ commands in Git Bash, so the scripts stay in bash; what differs between the two 
 | Setup (`scripts/setup.sh`) | Windows checks and `winget` install hints. On a company network that inspects TLS, curl and uv could not connect from Windows; setup now allows for that |
 | Job Chrome (`scripts/chrome.sh`) | Finds `chrome.exe` and stops it with `taskkill` |
 | Playing audio | New `lib/play.py` plays a WAV file on either system (`afplay` on a Mac, Python's `winsound` on Windows); auditions print it as their play command |
+| Desktop app capture (job.json `"native"`) | `capture/native/nativecap.cs`, the Windows twin of the Swift helper, built with the C# compiler that comes with Windows. Records the screen area under the app's window (a take stops if another window covers it), drives SendInput, reads UI Automation. No permissions to grant or clean up (added 2026-11-12) |
 | Not on Windows yet | Chatterbox (`scripts/setup-chatterbox.sh` stops with a message) and the `say` draft voice (macOS only). NodeTerm is not checked for; the builder runs in a second terminal window |
 
 Tested with the test run on a Windows 11 laptop (Intel Core i7-13800H, CPU only): setup installed everything and

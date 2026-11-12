@@ -8,7 +8,8 @@
 // Screencast frames arrive only when the page changes; lib/build_clips.py resamples to a steady 30 fps.
 // There is no real cursor in the capture: the pointer path is logged here and drawn in the render.
 // Sign-in pages are never recorded: it refuses to start on one (exit 2) and deletes a take that reaches one (exit 3).
-// With --app, as in rec_app.js: exit 4 a macOS permission is missing, exit 5 the app window moved during the take,
+// With --app, as in rec_app.js: exit 2 or 3 with COVERED (Windows) another app's window was over the app,
+// exit 4 a macOS permission is missing, exit 5 the app window moved during the take,
 // exit 1 with APP CAPTURE ERROR the app recording stopped on its own (its clip is cut short).
 const C = require('./cdp'); const fs = require('fs'); const path = require('path');
 (async () => {
@@ -24,22 +25,28 @@ const C = require('./cdp'); const fs = require('fs'); const path = require('path
   let N, h, appLog, AD, appDir, appBusy = false;
   if (process.argv.includes('--app')) {
     N = require('./native'); h = await N.open(); const win = await N.ready(h); appDir = dir + '_app';
-    const s = (await N.check(h)).signin;
+    const c0 = await N.check(h), s = c0.signin;
     if (s) { console.log(`LOGIN NEEDED: take ${name} not started, ${win.app} looks like a sign-in screen (${s}). Sign in off camera, then rerun.`); process.exit(2); }
+    if (c0.covered) { console.log(`COVERED: take ${name} not started, ${c0.covered}. Close or move that window, then rerun.`); process.exit(2); }
     fs.rmSync(appDir, { recursive: true, force: true }); fs.mkdirSync(appDir, { recursive: true });
     appLog = { source: 'app', app: win.app, window: win, frames: [], cursor: [], marks: [] }; AD = N.driver(h, appLog);
   }
   fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
   // if a sign-in page appears mid-take: stop, delete this take's raw frames, log the deletion, and exit
-  let aborted = false, moved = '';
+  // (Windows) the same when another app's window is over the app's recorded area: it would be in the app clip
+  let aborted = false, moved = '', covered = '';
   const guard = async () => { if (aborted) return; let why = await C.signInReason(page);
     if (!why && h && !appBusy) { appBusy = true; const c = await N.check(h).catch(() => ({})); appBusy = false; if (c.signin) why = appLog.app + ': ' + c.signin;   // one app check at a time
+      else if (c.covered) covered = c.covered;
       if (c.moved && !moved) { moved = c.moved; console.log(`WINDOW MOVED: ${appLog.app}'s window moved during take ${name} (${c.moved}), so its clicks are off. Rerun it; nothing else needs to change.`); } }
-    if (!why || aborted) return; aborted = true;
+    if ((!why && !covered) || aborted) return; aborted = true;
     await cdp.send('Page.stopScreencast').catch(() => {}); fs.rmSync(dir, { recursive: true, force: true });
     if (h) { await h.call('stop').catch(() => {}); fs.rmSync(appDir, { recursive: true, force: true }); }
-    try { fs.appendFileSync(path.join(C.JOB, 'logs', 'state_changes.md'), `| ${new Date().toISOString()} | Deleted raw take ${name} | capture/rec/${name} | A sign-in page appeared (${why}); sign-in screens are never kept |\n`); } catch (e) {}
-    console.log(`LOGIN NEEDED: take ${name} stopped and its raw frames deleted, a sign-in page appeared (${why}). Sign in off camera, then rerun.`); process.exit(3); };
+    const what = why ? `A sign-in page appeared (${why}); sign-in screens are never kept` : `Another app's window was over ${appLog.app} (${covered}); other apps are never kept`;
+    try { fs.appendFileSync(path.join(C.JOB, 'logs', 'state_changes.md'), `| ${new Date().toISOString()} | Deleted raw take ${name} | capture/rec/${name} | ${what} |\n`); } catch (e) {}
+    if (why) console.log(`LOGIN NEEDED: take ${name} stopped and its raw frames deleted, a sign-in page appeared (${why}). Sign in off camera, then rerun.`);
+    else console.log(`COVERED: take ${name} stopped and its raw frames deleted, ${covered}. Close or move that window (turn on Do Not Disturb for notifications), then rerun.`);
+    process.exit(3); };
   const dtext = async (n = 20000) => page.evaluate(C.DTEXT, n);
   let cur = { x: 1700, y: 900 }; const log = { frames: [], cursor: [], marks: [] }; let t0 = null; let n = 0;
   cdp.on('Page.screencastFrame', async f => {

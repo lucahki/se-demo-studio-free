@@ -3,6 +3,24 @@
 What changed in each studio version, newest first. Your version is in the `VERSION` file and on the first line
 that `scripts/setup.sh` prints.
 
+## Unreleased (desktop app capture on Windows, 2026-11-12)
+
+- Jobs on Windows can record and drive a desktop app window, such as the Webex app, as they already could on a Mac:
+  the same job.json `"native"`, `capture/app.js`, `rec_app.js`, `rec.js --app`, take helpers, and log format.
+  The helper is `capture/native/nativecap.cs`, built on first use with the C# compiler that comes with Windows
+  (nothing to install), with `tlbconv.cs` for the UI Automation interface.
+- Windows has no Screen Recording or Accessibility permissions, so there is nothing to grant or clean up;
+  `--permissions` and `--status` say so.
+- The recording is the screen area under the app's window, so another app's window or a notification over it
+  stops the take and deletes its frames (`COVERED`, exit 2 before the take, exit 3 during), and `shot()` refuses.
+- Labels and text come from UI Automation, with control types under their macOS role names (`AXButton`), so take
+  scripts and the incoming-call recipe carry over; `cmd` in `key()` means Ctrl. Only elements inside the recorded
+  area are read, which keeps a walk of the Webex app near two seconds.
+- The window is sized in points on the display it is on (1.5 times the pixels at 150% scaling); an app running as
+  administrator is refused with a message; optional `"title"` picks the main window when the app has several.
+- Tested on Windows 11 with the Webex app: a `rec.js --app` take (Chrome tab and Webex on one clock) through the
+  edit, cursor, mix, render, captions, and player. The incoming-call recipe is not yet tested on Windows.
+
 ## Unreleased (fixes from a review before publishing, 2026-11-12)
 
 - A call is read with the free local Kokoro voice unless the job picks Gemini (`"dialogue"` `"engine"`); it used to

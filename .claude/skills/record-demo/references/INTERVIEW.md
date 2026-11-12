@@ -104,10 +104,11 @@ Ask this round right after round 2 when the environment is their own or the stor
 
 14. **Surfaces and identities.** Every app, console, or window the story uses; which identity signs in to each
     (check whether one covers all); which apps allow only one session at a time (sign out elsewhere first); and
-    which open in a new tab. A desktop app (the Webex app, for example) can be recorded too, on a Mac only: it
-    must be signed in with a demo identity, not their everyday account, since its spaces, contacts, and messages
-    would be on camera; the terminal needs Screen Recording and Accessibility (references/SETUP.md "Native app
-    capture"); and during its takes the real pointer and keyboard are driven, so they keep hands off. Say whether
+    which open in a new tab. A desktop app (the Webex app, for example) can be recorded too, on a Mac or on
+    Windows: it must be signed in with a demo identity, not their everyday account, since its spaces, contacts,
+    and messages would be on camera; on a Mac the terminal needs Screen Recording and Accessibility, and on
+    Windows notifications go off (references/SETUP.md "Native app capture"); and during its takes the real
+    pointer and keyboard are driven, so they keep hands off. Say whether
     it should share a take with the Chrome tab (one moment seen on both screens, such as a message sent in one and
     arriving in the other) or have takes of its own.
 15. **Live actions by the owner.** Recommend none unless the live event is the point of the story; a record the

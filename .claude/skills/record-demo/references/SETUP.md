@@ -144,10 +144,30 @@ its spend with `budget_usd` in job.json "voice" and "dialogue" (default $2), cou
 the free tier. Google adds an inaudible SynthID watermark to its generated audio (stated for its audio models;
 the speech page does not repeat it).
 
-## Native app capture (optional, macOS)
+## Native app capture (optional)
 
 Only for a job that records a desktop app window, such as the Webex app (job.json `"native"`,
-references/PIPELINE.md "Native app windows"). Not available on Windows.
+references/PIPELINE.md "Native app windows"). On macOS and Windows.
+
+### On Windows
+
+1. **Nothing to install.** The helper is built on first use with the C# compiler that comes with Windows
+   (.NET Framework 4.8). If setup.sh says it is missing, turn on ".NET Framework 4.8 Advanced Services" in
+   Windows Features (Control Panel, Programs, Turn Windows features on or off).
+2. **No permissions.** Windows does not ask before a program records the screen or moves the pointer, so there is
+   nothing to turn on, and nothing to turn back off at the end of the job. `node capture/app.js --permissions`
+   says so.
+3. **The app itself.** They open it and sign in themselves, with a demo identity, not their everyday account
+   (CLAUDE.md). It must not run as administrator (Windows would block the pointer and keyboard); the studio says
+   so if it does. During takes the pointer and keyboard are driven for them: hands off until the take ends.
+4. **Do Not Disturb on** (Settings, System, Notifications), and other windows away from the app. On Windows the
+   recording is the screen area under the app's window, so a notification or another window over it would be
+   recorded: the take stops instead (COVERED) and its frames are deleted.
+5. **Display scaling.** The window is sized in points, like on a Mac. On a display at 100% the app records at
+   1920x1080 pixels at most, and push-ins look soft; a 4K display at 150% records at 2880x1620. If the person has
+   both, put the app on the sharper one before the first run.
+
+### On macOS
 
 1. **Swift compiler.** setup.sh prints "Native app capture" as information. If it says the Command Line Tools are
    missing, run `xcode-select --install` (free, from Apple, about 1 GB).
