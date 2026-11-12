@@ -162,7 +162,8 @@ references/PIPELINE.md "Native app windows"). Not available on Windows.
    prints both as "on".
 3. Tell them what this grants: any program run from that terminal can record the screen and control the mouse and
    keyboard. At the end of the job the studio turns both back off, to how they were before the job, unless they
-   say "no" (`node capture/app.js --revoke`, references/SUPERVISING.md). macOS may ask again from time to time
+   say "no" (`node capture/app.js --revoke`, references/SUPERVISING.md). One that was already on before the job
+   stays on. If a job ends before its clean-up, the next session offers it (`scripts/pending-cleanup.sh`). macOS may ask again from time to time
    whether the terminal may keep recording the screen; the answer is "Allow".
 4. **The app itself.** They open it and sign in themselves, with a demo identity, not their everyday account
    (CLAUDE.md). During takes the pointer and keyboard are driven for them: hands off until the take ends, and

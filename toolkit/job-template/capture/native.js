@@ -21,6 +21,20 @@ const SRC = path.join(__dirname, 'native', 'nativecap.swift');
 const BIN = path.join(__dirname, 'native', '.build', 'nativecap');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// The two permissions belong to the terminal app, not to this job. logs/permissions.json keeps how they were the
+// first time this job touched the app (any capture/app.js mode, rec_app.js, rec.js --app), so the clean-up
+// (capture/app.js --revoke) turns off only what this job turned on and leaves on what was already on. Written once;
+// --revoke and --keep add what happened at the end, and scripts/pending-cleanup.sh lists jobs where neither ran.
+const REC = path.join(JOB, 'logs', 'permissions.json');
+const TERMS = { Apple_Terminal: 'com.apple.Terminal', 'iTerm.app': 'com.googlecode.iterm2', vscode: 'com.microsoft.VSCode', ghostty: 'com.mitchellh.ghostty', WarpTerminal: 'dev.warp.Warp-Stable' };
+const TERMINAL = process.env.__CFBundleIdentifier || TERMS[process.env.TERM_PROGRAM] || '';
+function noteBefore(perm) {
+  if (fs.existsSync(REC)) return;
+  try { fs.mkdirSync(path.dirname(REC), { recursive: true });
+    fs.writeFileSync(REC, JSON.stringify({ terminal: TERMINAL, before: { screen: !!perm.screen, accessibility: !!perm.accessibility }, at: new Date().toISOString() }, null, 1)); }
+  catch (e) { console.log('note: could not write logs/permissions.json (' + e.message + '); the clean-up will treat both permissions as off before this job'); }
+}
+
 function build() {
   if (process.platform !== 'darwin') throw new Error('Native app capture runs on macOS only (it uses ScreenCaptureKit).');
   const hash = crypto.createHash('sha256').update(fs.readFileSync(SRC)).digest('hex');
@@ -52,7 +66,7 @@ async function open(opts = {}) {
     const id = next++; waiting.set(id, { resolve, reject }); p.stdin.write(JSON.stringify({ id, op, ...args }) + '\n');
   });
   const close = async () => { if (!dead) { try { p.stdin.end(); } catch (e) {} } await new Promise(r => { if (p.exitCode !== null || p.signalCode !== null) r(); else p.on('exit', r); }); };   // signalCode: a crashed helper
-  await call('check');   // fails here if the app is not running
+  noteBefore(await call('check'));   // fails here if the app is not running
   return { call, close };
 }
 
@@ -123,4 +137,4 @@ function driver(h, log) {
 // For takes: why the app looks like a sign-in screen ('' if not), whether the window moved, and whether it is in front.
 async function check(h) { const g = await h.call('guard'); return { signin: g.reason, moved: g.moved, front: g.front }; }
 
-module.exports = { open, ready, driver, check, build, CFG, NAT, JOB, sleep };
+module.exports = { open, ready, driver, check, build, noteBefore, REC, TERMINAL, CFG, NAT, JOB, sleep };

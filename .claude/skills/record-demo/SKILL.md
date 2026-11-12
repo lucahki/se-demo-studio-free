@@ -32,6 +32,12 @@ idea. A missing tool or the wrong effort found after an hour of planning costs a
    stands, and resume supervising (references/SUPERVISING.md). Skip the interview.
 3. **Setup.** Run `scripts/setup.sh`. If it does not end with "SETUP OK", walk them through
    references/SETUP.md one failing line at a time. There is no key to set up; never read `.env`.
+4. **Permissions left on by an earlier job.** Run `scripts/pending-cleanup.sh` (also when continuing a job). For
+   each "PENDING" line, an earlier job that recorded a desktop app may have left the terminal's Screen Recording
+   and Accessibility on. Ask, in plain words, as in references/SUPERVISING.md "Clean-up of the terminal's
+   permissions", and add: "If that job is still running in another window, say so and I'll leave it." Then, in that
+   job's folder, `node capture/app.js --revoke` (the default), or `--keep` after an explicit "no", or nothing if
+   that job is still running.
 
 ## Test run
 
@@ -177,8 +183,9 @@ decision back; check the rough cut; give the final report.
 
 **Clean-up (jobs that recorded a desktop app).** Before closing out, and also when such a job stops early,
 offer to turn the terminal's Screen Recording and Accessibility back off: the default is to turn them off, and
-only the person's explicit "no" keeps them on. Then run `node capture/app.js --revoke` from the job folder
-(references/SUPERVISING.md "Clean-up of the terminal's permissions").
+only the person's explicit "no" keeps them on. Then run `node capture/app.js --revoke` from the job folder, or
+`node capture/app.js --keep` after a "no" (references/SUPERVISING.md "Clean-up of the terminal's permissions"). A
+clean-up that never runs is caught by Step 0 item 4 in the next session.
 
 ## Rules that hold throughout
 

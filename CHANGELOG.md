@@ -21,6 +21,16 @@ that `scripts/setup.sh` prints.
   another window covers the pointer, as a click is; frame coordinates use each axis on its own for a window
   slightly off 16:9; closing a crashed helper no longer hangs; `rec.js` prints `ERROR` instead of a stack trace.
 
+## Unreleased (permission clean-up you can count on, 2026-11-12)
+
+- How the terminal's Screen Recording and Accessibility were before a job is recorded the first time the job
+  touches the app (any `capture/app.js` mode, `rec_app.js`, `rec.js --app`), not only when it asks for them. A
+  permission that was already on stays on after the clean-up; before, a job that never had to ask turned it off.
+- `scripts/pending-cleanup.sh` lists earlier jobs whose clean-up never ran (stopped early, or the session ended)
+  or where macOS kept one on; every session runs it (SKILL.md Step 0 item 4) and offers the clean-up, with the
+  same default: off, unless the person says no. `node capture/app.js --keep` records a "no", so it is not asked
+  again; `--revoke` now records every run, also when there was nothing to turn off.
+
 ## Unreleased (branch gemini-voice)
 
 - Free first, a remote voice when the local ones are not good enough. New voice engine `gemini`: Google's

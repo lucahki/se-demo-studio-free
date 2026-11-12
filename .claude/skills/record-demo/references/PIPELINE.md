@@ -110,7 +110,8 @@ where Webex puts it and the take answers it there without moving it).
 | Request the two macOS permissions | `node capture/app.js --permissions`: opens the requests and the System Settings pages (exit 4 while one is missing) |
 | Only check them | `node capture/app.js --status` (asks and opens nothing; use it to confirm, for example after `--revoke`) |
 | Running apps with a window | `node capture/app.js --list` |
-| Clean-up at the end of the job (after the owner's yes) | `node capture/app.js --revoke`: the permissions back to how they were before the job (`logs/permissions.json`) |
+| Clean-up at the end of the job (the default; also when it stops early) | `node capture/app.js --revoke`: the permissions back to how they were the first time this job touched the app (`logs/permissions.json`); after the owner's explicit "no", `node capture/app.js --keep` records that they stay on |
+| Earlier jobs whose clean-up never ran | `scripts/pending-cleanup.sh` from the studio root (SKILL.md Step 0 item 4) |
 | Explore the app | `node capture/app.js '<async JS using app, shot, text, find, sleep, mv, click, clickText, type, key, wheel>'` |
 | Record an app-only take | `node capture/rec_app.js <take> capture/takes/<script>.js` |
 | Record the Chrome tab and the app together | `TAG=rec node capture/rec.js <take> capture/takes/<script>.js --app` -> `capture/rec/<take>/` and `capture/rec/<take>_app/` |

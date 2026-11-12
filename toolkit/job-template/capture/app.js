@@ -5,7 +5,8 @@
 //        node capture/app.js --status        only show whether the two permissions are on (asks and opens nothing)
 //        node capture/app.js --list          running apps with windows (names only)
 //        node capture/app.js --revoke        clean-up at the end of the job: turn both permissions back to how they
-//                                            were before this job (logs/permissions.json), only after the owner's yes
+//                                            were before this job (logs/permissions.json); the default at the end
+//        node capture/app.js --keep          the owner said "no" to the clean-up: record that they stay on
 // Example: node capture/app.js 'await shot("home"); return await text(3000)'
 //          node capture/app.js 'return await find(/^Messaging$|^Calling$/)'     -> labels with their 1920x1080 boxes
 // Every run brings the app to the front and sizes its window to 16:9 first. Screenshots are 1920x1080, in the
@@ -16,34 +17,39 @@ const N = require('./native'); const fs = require('fs'); const path = require('p
   const a = process.argv[2] || '';
   const perms = () => JSON.parse(execFileSync(N.build(), ['check']).toString());
   const pane = k => `x-apple.systempreferences:com.apple.preference.security?Privacy_${k}`;
-  // The permissions belong to the terminal app, not to this job. logs/permissions.json keeps how they were before
-  // the job first asked for them, so the clean-up can put them back.
-  const REC = path.join(N.JOB, 'logs', 'permissions.json');
-  const TERMS = { Apple_Terminal: 'com.apple.Terminal', 'iTerm.app': 'com.googlecode.iterm2', vscode: 'com.microsoft.VSCode', ghostty: 'com.mitchellh.ghostty', WarpTerminal: 'dev.warp.Warp-Stable' };
-  const terminal = process.env.__CFBundleIdentifier || TERMS[process.env.TERM_PROGRAM] || '';
-  if (a === '--status') { const p = perms(); console.log(`Screen Recording: ${p.screen ? 'on' : 'off'}   Accessibility: ${p.accessibility ? 'on' : 'off'}`); process.exit(p.screen && p.accessibility ? 0 : 4); }
+  // logs/permissions.json (capture/native.js noteBefore): how the permissions were when this job first touched the app
+  const REC = N.REC, terminal = N.TERMINAL;
+  const save = rec => { try { fs.mkdirSync(path.dirname(REC), { recursive: true }); fs.writeFileSync(REC, JSON.stringify(rec, null, 1)); } catch (e) {} };
+  if (a === '--status') { const p = perms(); N.noteBefore(p); console.log(`Screen Recording: ${p.screen ? 'on' : 'off'}   Accessibility: ${p.accessibility ? 'on' : 'off'}`); process.exit(p.screen && p.accessibility ? 0 : 4); }
+  if (a === '--keep') {
+    let rec = {}; try { rec = JSON.parse(fs.readFileSync(REC, 'utf8')); } catch (e) {}
+    rec.kept = { at: new Date().toISOString(), now: perms() }; save(rec);
+    console.log('Kept on, as the owner asked (recorded in logs/permissions.json, so the studio does not ask again for this job). ' +
+      'To turn them off later: System Settings, Privacy & Security, Screen Recording and Accessibility, switch the terminal app off; or run node capture/app.js --revoke in this folder.');
+    process.exit(0);
+  }
   if (a === '--revoke') {
     let rec = { before: { screen: false, accessibility: false } };   // no record: they were off before (the default)
     try { rec = JSON.parse(fs.readFileSync(REC, 'utf8')); } catch (e) {}
+    rec.before = rec.before || { screen: false, accessibility: false };
     const now = perms(), id = rec.terminal || terminal;
     const todo = [['screen', 'ScreenCapture', 'Screen Recording'], ['accessibility', 'Accessibility', 'Accessibility']].filter(([k]) => now[k] && !rec.before[k]);
     for (const [k] of [['screen'], ['accessibility']]) if (now[k] && rec.before[k]) console.log(`${k === 'screen' ? 'Screen Recording' : 'Accessibility'}: left on, it was already on before this job started`);
-    if (!todo.length) { console.log('Nothing to turn off: the permissions are as they were before this job.'); process.exit(0); }
+    if (!todo.length) {   // recorded too, so scripts/pending-cleanup.sh no longer lists this job
+      rec.revoked = { at: new Date().toISOString(), still_on: [] }; save(rec);
+      console.log('Nothing to turn off: the permissions are as they were before this job.'); process.exit(0); }
     if (!id) console.log('Could not tell which terminal app this is, so nothing was reset automatically.');
     else for (const [, svc, label] of todo) { try { execFileSync('tccutil', ['reset', svc, id], { stdio: 'ignore' }); } catch (e) { console.log(`tccutil could not reset ${label} for ${id}`); } }
     const after = perms(); const left = todo.filter(([k]) => after[k]);
     for (const [k, , label] of todo) console.log(`${label}: ${after[k] ? 'STILL ON' : 'off again'}`);
-    rec.revoked = { at: new Date().toISOString(), still_on: left.map(x => x[2]) };
-    try { fs.mkdirSync(path.dirname(REC), { recursive: true }); fs.writeFileSync(REC, JSON.stringify(rec, null, 1)); } catch (e) {}
+    rec.revoked = { at: new Date().toISOString(), still_on: left.map(x => x[2]) }; save(rec);
     if (left.length) { for (const [, svc] of left) execFileSync('open', [pane(svc)]);
       console.log(`System Settings is open: switch the terminal app off under ${left.map(x => x[2]).join(' and ')} (or select it and click -).`); process.exit(4); }
     console.log('Done: the terminal app can no longer record the screen or control the mouse and keyboard. A later job that records a desktop app asks again.');
     process.exit(0);
   }
   if (a === '--permissions' || a === '--list') {
-    if (a === '--permissions' && !fs.existsSync(REC)) {
-      try { fs.mkdirSync(path.dirname(REC), { recursive: true });
-        fs.writeFileSync(REC, JSON.stringify({ terminal, before: perms(), at: new Date().toISOString() }, null, 1)); } catch (e) {} }
+    N.noteBefore(perms());   // before asking for anything
     const out = execFileSync(N.build(), [a === '--list' ? 'list' : 'check', ...(a === '--permissions' ? ['--prompt'] : [])]).toString();
     if (a === '--list') { for (const x of JSON.parse(out).apps) console.log(`${x.app}  (${x.bundle})`); process.exit(0); }
     const p = JSON.parse(out);

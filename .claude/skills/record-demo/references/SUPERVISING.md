@@ -117,9 +117,11 @@ that terminal do (record the screen; move the mouse, type, and read other apps' 
 
 Only an explicit "no" (or "keep them") keeps them; any other answer, including "ok", "sure", or a question you
 then answer, means turn them off. Then, in the job folder, run `node capture/app.js --revoke`. It turns off only
-what this job turned on (from `logs/permissions.json`, written when the job first asked; without that file it
-treats both as off before the job), checks the result, and records it in the same file. Exit 0 with "Done" means
+what this job turned on (from `logs/permissions.json`, written the first time the job touched the app, so a
+permission that was already on stays on; without that file it treats both as off before the job), checks the
+result, and records it in the same file. Exit 0 with "Done" means
 both are back as before; exit 4 means macOS kept one on, and System Settings is open at that page for them to
-switch it off themselves. Confirm with `node capture/app.js --status` (not `--permissions`, which asks for them again). If they said "no", note that in the final report
-and tell them where to turn the permissions off later (System Settings, Privacy & Security, Screen Recording and
+switch it off themselves. Confirm with `node capture/app.js --status` (not `--permissions`, which asks for them again). If they said "no", run `node capture/app.js --keep`
+(it records the answer, so `scripts/pending-cleanup.sh` does not ask again for this job), note it in the final
+report, and tell them where to turn the permissions off later (System Settings, Privacy & Security, Screen Recording and
 Accessibility). Never run `--revoke` while the builder may still record, and never in another job's folder.
