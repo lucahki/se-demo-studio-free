@@ -19,7 +19,10 @@ that `scripts/setup.sh` prints.
 - The window is sized in points on the display it is on (1.5 times the pixels at 150% scaling); an app running as
   administrator is refused with a message; optional `"title"` picks the main window when the app has several.
 - Tested on Windows 11 with the Webex app: a `rec.js --app` take (Chrome tab and Webex on one clock) through the
-  edit, cursor, mix, render, captions, and player. The incoming-call recipe is not yet tested on Windows.
+  edit, cursor, mix, render, captions, and player; and the incoming-call recipe with a live call (PIPELINE.md has
+  the Windows answer step: the toast's buttons are not readable, so a take answers with Control+Shift+C).
+- The accessibility walk on Windows reads into Qt's nested windows (the Webex call window's controls report bounds
+  relative to their parent) and visits each element once (Qt's tree can loop); labels are trimmed.
 
 ## Unreleased (fixes from a review before publishing, 2026-11-12)
 

@@ -203,9 +203,21 @@ To show the toast where Webex opens it, bottom right of the display, instead of 
 NEEDED if the toast or its answer button is outside 0..1920 by 0..1080 (tested on the Webex app, 2026-11-12: the
 toast opened inside the frame at bottom right and was answered there).
 
-On Windows the recipe has not yet been run against a live call: in a rehearsal, check where the toast opens,
-whether it is a window of its own in `windows()`, and whether `"anchor": "bottom-right"` puts it inside the
-recorded area, before the first take.
+On Windows (tested on the Webex app, 2026-11-12, with `"anchor": "bottom-right"` and a call placed from a mobile
+phone): the toast is a window of its own ("Webex Incoming call") and opened inside the frame at bottom right, but
+its answer and decline buttons are icons that UI Automation does not show, so `answerBtn()` finds nothing. Wait
+for the new window instead and answer with the shortcut:
+
+```js
+const before = await windows(); console.log('OWNER ACTION NEEDED: place the call now'); mark('owner_wait');
+const toast = await waitWindow(300, w => /incoming call/i.test(w.title), before); mark('ringing');
+await sleep(2500); await key('c', ['ctrl', 'shift']); mark('answered');
+```
+
+The call window's controls are readable (`End call`, `Mute` as `AXButton`), so the rest of the recipe runs as it
+is; the call connected in about 4 s. Two first-call tips are windows of their own: "Real-time closed captions"
+(`Got it`), and "Cisco AI Assistant is available" after the call window is placed. Dismiss both in a rehearsal
+call. Webex's own red dot in the call window means the org records calls, not the studio.
 
 What the test showed: the toast opens on the display where the pointer is, and `place` cannot move it to another
 display, so keep the pointer on the app window while waiting (hands off). If `a` is outside 0..1920 by 0..1080

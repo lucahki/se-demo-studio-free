@@ -1,4 +1,4 @@
-// Record one long take of a native macOS app window (job.json "native", e.g. the Webex desktop app) while a
+// Record one long take of a desktop app window (job.json "native", e.g. the Webex desktop app) while a
 // take script drives it like a person. The app-window twin of rec.js; to record a Chrome tab and the app in the
 // same take, use rec.js with --app instead.
 // usage: node capture/rec_app.js <take_name> capture/takes/<script>.js

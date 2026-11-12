@@ -158,7 +158,7 @@ class Node {
 static class Ax {
   static IUIAutomation u; static IUIAutomationCacheRequest one, sub; static IUIAutomationCondition cv;
   static readonly object lk = new object();
-  const int CT = 30003, NAME = 30005, RECTP = 30001, PASSWORD = 30019, FW = 30024, OFFSCREEN = 30022, VALUE = 30045, HELP = 30013;
+  const int RID = 30000, CT = 30003, NAME = 30005, RECTP = 30001, PASSWORD = 30019, FW = 30024, OFFSCREEN = 30022, VALUE = 30045, HELP = 30013;
   // UIA control types as their macOS Accessibility role names, so take scripts and recipes written for the Mac
   // version (find(/answer/, 'AXButton')) run as they are; the UIA name is in "uia"
   static readonly Dictionary<int, string[]> ROLES = new Dictionary<int, string[]> {
@@ -179,7 +179,7 @@ static class Ax {
 
   static IUIAutomationCacheRequest Req(TreeScope scope) {
     var r = u.CreateCacheRequest();
-    foreach (int p in new[] { CT, NAME, RECTP, PASSWORD, FW, OFFSCREEN, VALUE, HELP }) r.AddProperty(p);
+    foreach (int p in new[] { RID, CT, NAME, RECTP, PASSWORD, FW, OFFSCREEN, VALUE, HELP }) r.AddProperty(p);
     r.TreeScope = scope; r.TreeFilter = cv; return r;
   }
   static void Init() {
@@ -191,11 +191,15 @@ static class Ax {
   static T Get<T>(Func<T> f, T dflt) { try { return f(); } catch { return dflt; } }
 
   class Walk {
-    public List<Node> Out = new List<Node>(); public int Max; public Stopwatch Sw = Stopwatch.StartNew(); public double Secs;
+    public List<Node> Out = new List<Node>(); public HashSet<string> Seen = new HashSet<string>(); public int Max; public Stopwatch Sw = Stopwatch.StartNew(); public double Secs;
     public bool Done { get { return Out.Count >= Max || Sw.Elapsed.TotalSeconds >= Secs; } }
   }
+  // Qt nests its Quick views (Webex's call window controls, its incoming-call toast) in child Window elements whose
+  // bounds are relative to the parent window (4,356 instead of screen pixels): walk into those whatever their bounds
+  // say, and judge the elements inside by their own
   static bool Keep(IUIAutomationElement e, int depth, W.RECT clip) {
     if (depth == 0) return true;
+    if (Get(() => e.CachedControlType, 0) == 50032) return true;
     if (Get(() => e.CachedIsOffscreen, 0) != 0) return false;
     var r = Get(() => e.CachedBoundingRectangle, new tagRECT());
     return W.Intersects(new W.RECT { L = r.left, T = r.top, R = r.right, B = r.bottom }, clip);
@@ -214,8 +218,13 @@ static class Ax {
     return n;
   }
   // one element, then its children; a Chrome web view (Webex's messages) in one call for its whole subtree
+  // Qt's tree can loop (a window listed again under its own descendants): each element is visited once
+  static bool First(Walk w, IUIAutomationElement e) {
+    var id = Get(() => e.GetCachedPropertyValue(RID) as int[], null);
+    return id == null || w.Seen.Add(string.Join(".", id));
+  }
   static void Visit(Walk w, IUIAutomationElement e, int depth, W.RECT clip) {
-    if (w.Done || !Keep(e, depth, clip)) return;
+    if (w.Done || !Keep(e, depth, clip) || !First(w, e)) return;
     w.Out.Add(Mk(e));
     if (depth >= 60) return;
     if (Get(() => e.CachedFrameworkId, "") == "Chrome") {
@@ -230,7 +239,7 @@ static class Ax {
     if (depth >= 60) return;
     IUIAutomationElementArray kids = Get(() => e.GetCachedChildren(), null); if (kids == null) return;
     for (int i = 0; i < kids.Length && !w.Done; i++) {
-      var k = kids.GetElement(i); if (!Keep(k, depth + 1, clip)) continue;
+      var k = kids.GetElement(i); if (!Keep(k, depth + 1, clip) || !First(w, k)) continue;
       w.Out.Add(Mk(k)); VisitCached(w, k, depth + 1, clip);
     }
   }
