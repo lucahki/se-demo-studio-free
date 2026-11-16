@@ -1,4 +1,4 @@
-// Record one long take of a native macOS app window (job.json "native", e.g. the Webex desktop app) while a
+// Record one long take of a desktop app window (job.json "native", e.g. the Webex desktop app) while a
 // take script drives it like a person. The app-window twin of rec.js; to record a Chrome tab and the app in the
 // same take, use rec.js with --app instead.
 // usage: node capture/rec_app.js <take_name> capture/takes/<script>.js
@@ -9,7 +9,8 @@
 // There is no real cursor in the capture: the pointer path is logged here and drawn in the render.
 // This moves the real pointer and keyboard: the owner keeps hands off until it prints the frame count.
 // Sign-in screens are never recorded: it refuses to start on one (exit 2) and deletes a take that reaches one
-// (exit 3). Exit 4: a macOS permission is missing. Exit 5: the window moved, so the take's clicks are off.
+// (exit 3). On Windows the same goes for another app's window over the recorded area (COVERED, exit 2 or 3).
+// Exit 4: a macOS permission is missing. Exit 5: the window moved, so the take's clicks are off.
 // Exit 1 with CAPTURE ERROR: the recording stopped on its own, so the clip is cut short.
 const N = require('./native'); const fs = require('fs'); const path = require('path');
 (async () => {
@@ -18,7 +19,9 @@ const N = require('./native'); const fs = require('fs'); const path = require('p
   const h = await N.open(); const win = await N.ready(h);
   const first = await N.check(h);
   if (first.signin) { console.log(`LOGIN NEEDED: take ${name} not started, ${win.app} looks like a sign-in screen (${first.signin}). Sign in off camera, then rerun.`); await h.close(); process.exit(2); }
-  if (win.scale < 2) console.log(`NOTE: ${win.app}'s window is on a display at ${win.scale}x; push-ins look sharper on a Retina display`);
+  if (first.covered) { console.log(`COVERED: take ${name} not started, ${first.covered}. Close or move that window, then rerun.`); await h.close(); process.exit(2); }
+  if (win.scale < 2 && !N.WIN) console.log(`NOTE: ${win.app}'s window is on a display at ${win.scale}x; push-ins look sharper on a Retina display`);
+  if (N.WIN && win.px[0] < 2400) console.log(`NOTE: ${win.app}'s window is ${win.px.join('x')} pixels (display scaling ${Math.round(win.scale * 100)}%); push-ins look sharper on a display at 150% or more`);
   fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
   const log = { source: 'app', app: win.app, window: win, frames: [], cursor: [], marks: [] };
   const D = N.driver(h, log);
@@ -26,10 +29,13 @@ const N = require('./native'); const fs = require('fs'); const path = require('p
   // one check at a time: a check of a busy app can take longer than the 2 s between them, and a queue of checks
   // would delay the take's own searches (find, clickText) behind it
   const guard = async () => { if (stop || busy) return; let c; busy = true; try { c = await N.check(h); } catch (e) { return; } finally { busy = false; } if (stop) return;
-    if (c.signin) { stop = 'signin';
+    if (c.signin || c.covered) { stop = c.signin ? 'signin' : 'covered';
       await h.call('stop').catch(() => {}); fs.rmSync(dir, { recursive: true, force: true });
-      try { fs.appendFileSync(path.join(N.JOB, 'logs', 'state_changes.md'), `| ${new Date().toISOString()} | Deleted raw take ${name} | capture/rec/${name} | A sign-in screen appeared in ${win.app} (${c.signin}); sign-in screens are never kept |\n`); } catch (e) {}
-      console.log(`LOGIN NEEDED: take ${name} stopped and its raw frames deleted, a sign-in screen appeared in ${win.app} (${c.signin}). Sign in off camera, then rerun.`);
+      const what = c.signin ? `A sign-in screen appeared in ${win.app} (${c.signin}); sign-in screens are never kept`
+        : `Another app's window was over the recorded area (${c.covered}); other apps are never kept`;
+      try { fs.appendFileSync(path.join(N.JOB, 'logs', 'state_changes.md'), `| ${new Date().toISOString()} | Deleted raw take ${name} | capture/rec/${name} | ${what} |\n`); } catch (e) {}
+      if (c.signin) console.log(`LOGIN NEEDED: take ${name} stopped and its raw frames deleted, a sign-in screen appeared in ${win.app} (${c.signin}). Sign in off camera, then rerun.`);
+      else console.log(`COVERED: take ${name} stopped and its raw frames deleted, ${c.covered}. Close or move that window (turn on Do Not Disturb for notifications), then rerun.`);
       await h.close(); process.exit(3); }
     if (c.moved) { stop = 'moved'; console.log(`WINDOW MOVED: take ${name} stopped (${c.moved}). Rerun it; nothing else needs to change.`); }
   };

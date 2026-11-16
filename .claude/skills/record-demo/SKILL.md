@@ -88,8 +88,8 @@ at the product happens in the job's own Chrome and the person signs in once.
 
 1. `scripts/new-job.sh <slug>` (assigns a free Chrome port).
 2. Fill `jobs/<slug>/job.json`: title, disclosure, hours, `app_url`, `app_match`, theme, respellings, and
-   `"native": {"app": "Webex"}` when a surface is a desktop app (macOS only; references/PIPELINE.md "Native app
-   windows").
+   `"native": {"app": "Webex"}` when a surface is a desktop app (macOS or Windows; references/PIPELINE.md "Native
+   app windows").
 3. Write `INTERVIEW.md` in the job folder. Add a "Verified facts" section (exact names, values hidden behind
    variables or settings panels, which records exist, schedules, identities, each with where you saw it) and a
    "Still unverified" list that the builder's exploration must close before the storyboard.
@@ -105,7 +105,8 @@ at the product happens in the job's own Chrome and the person signs in once.
    reward starting capture soon after sign-in. They sign in to every surface the story uses (references/INTERVIEW.md
    question 14), and sign out of single-session apps in any other browser first. For a desktop app, they sign
    in to it themselves with the demo identity, and you run `node capture/app.js --permissions` from the job folder
-   and walk them through references/SETUP.md "Native app capture" until both permissions are on.
+   and walk them through references/SETUP.md "Native app capture" until both permissions are on (on Windows there
+   are none: it says so, and you go through that section's Windows list instead).
 3. In the person's own environment, or whenever the story depends on specific configuration, do your
    reconnaissance in that same Chrome through `capture/tab.js` from the job folder, not in another browser. Look
    only; record what you confirm in INTERVIEW.md's "Verified facts". Take no screenshot until the page is signed in.
@@ -181,7 +182,7 @@ ACTION NEEDED at once (a take is waiting on it; when the demo must respond, only
 responder is armed); present the storyboard in full at STORYBOARD READY and pass their
 decision back; check the rough cut; give the final report.
 
-**Clean-up (jobs that recorded a desktop app).** Before closing out, and also when such a job stops early,
+**Clean-up (jobs that recorded a desktop app on a Mac; Windows has nothing to clean up).** Before closing out, and also when such a job stops early,
 offer to turn the terminal's Screen Recording and Accessibility back off: the default is to turn them off, and
 only the person's explicit "no" keeps them on. Then run `node capture/app.js --revoke` from the job folder, or
 `node capture/app.js --keep` after a "no" (references/SUPERVISING.md "Clean-up of the terminal's permissions"). A

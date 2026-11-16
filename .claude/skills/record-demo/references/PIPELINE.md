@@ -94,20 +94,23 @@ for (let t = 0; t < 300; t++) {
 mark('owner_done');
 ```
 
-### Native app windows (macOS only)
+### Native app windows (macOS and Windows)
 
 A story can also show a desktop app, such as the Webex app, next to or instead of the Chrome tab. Set job.json
-`"native": {"app": "Webex"}` (the app's name or bundle id; Webex is `Cisco-Systems.Spark`). Optional: `"size":
+`"native": {"app": "Webex"}` (the app's name or bundle id; Webex is `Cisco-Systems.Spark`; on Windows its name,
+program file, or window title, and "Webex" works on both). Optional: `"size":
 [1440, 810]` (window size in points, 16:9; by default the largest of 1920x1080, 1600x900, 1440x810, 1280x720,
 1120x630 that fits its display), `"mode": "window"` (only the main window; the default `"app"` captures all of the
 app's windows cropped to the main window, so its menus, pop-ups, and call windows show and other apps do not),
 and `"anchor": "bottom-right"` (the window goes in the bottom-right corner of the display's free area instead of
 the center; use it when the story shows an incoming Webex call, so the call toast opens inside the recorded area
-where Webex puts it and the take answers it there without moving it).
+where Webex puts it and the take answers it there without moving it). Windows only: `"title": "<pattern>"` picks
+the main window by its title when the app has several large windows open (otherwise the largest one is used;
+closing the others is simpler).
 
 | Step | Command |
 |---|---|
-| Request the two macOS permissions | `node capture/app.js --permissions`: opens the requests and the System Settings pages (exit 4 while one is missing) |
+| Request the two macOS permissions | `node capture/app.js --permissions`: opens the requests and the System Settings pages (exit 4 while one is missing); on Windows it says there are none and exits 0 |
 | Only check them | `node capture/app.js --status` (asks and opens nothing; use it to confirm, for example after `--revoke`) |
 | Running apps with a window | `node capture/app.js --list` |
 | Clean-up at the end of the job (the default; also when it stops early) | `node capture/app.js --revoke`: the permissions back to how they were the first time this job touched the app (`logs/permissions.json`); after the owner's explicit "no", `node capture/app.js --keep` records that they stay on |
@@ -149,6 +152,29 @@ How it differs from a Chrome tab:
 - The app must be signed in with a demo identity (a dCloud or lab user, a sandbox org), never the owner's everyday
   account: its spaces, contacts, and messages would be recorded and sent to Anthropic in frame reviews.
 
+On Windows (the helper is `capture/native/nativecap.cs`, built on first use with the C# compiler that comes with
+Windows, about 10 s; same commands, same take helpers, same log), the differences are:
+
+- No permissions: nothing to request, check, or clean up at the end of the job.
+- The recording is the screen area under the app's window. Another app's window or a notification over that area
+  would be recorded, so the take refuses to start (exit 2) or stops and deletes its raw frames (exit 3), printing
+  `COVERED:` with that app's program name; `shot()` refuses too. Close or move that window and rerun. Turn on Do
+  Not Disturb (Settings, System, Notifications) before the takes. `"mode": "window"` records only the main window
+  (slower, and without the app's pop-ups); it is not stopped by other windows.
+- `size` is in points, as on a Mac: on a display at 150% the window is 1.5 times as many pixels. At 100% the clip
+  is at most 1920x1080 pixels and rec_app.js prints a NOTE; push-ins are sharper on a display at 150% or more.
+- `key()` modifiers are `ctrl`, `shift`, `alt`, `win`; `cmd` means Ctrl, so a take written on a Mac
+  (`key('k', ['cmd'])`) runs as it is, but check the app's Windows shortcuts.
+- Roles: UI Automation control types come back under their macOS names (`Button` as `AXButton`, `Edit` as
+  `AXTextField`, `Text` as `AXStaticText`, `ListItem` as `AXRow`, `Document` as `AXWebArea`), with the Windows name
+  in `uia`; `find()` and `clickText()` take either. Only elements inside the recorded area are read (or inside
+  each window with `{ anywhere: true }`), which keeps a walk of the Webex app near two seconds.
+- `wheel()` is about 100 screen pixels per notch; the app decides how far that scrolls, so check it in a rehearsal.
+- The app must not run as administrator (Windows blocks the pointer and keyboard; the studio stops and says so).
+- The Webex app on Windows is Qt with embedded Chrome views (its message list); both show in the tree. Its left
+  rail items are Qt custom controls (`AXUnknown`, `uia` `Custom`) labeled like `Calling menu item, 3 of 12`:
+  click them by label without a role, `clickText(/^Calling menu item/)`. A walk of its window took under a second.
+
 Pop-ups such as an incoming-call toast and a call window are windows of their own, and can open outside the
 recorded area or on another display. `windows()` lists the app's windows in frame pixels (the main window is
 `main: true`; anything outside 0..1920 by 0..1080 is off camera), `waitWindow(secs, test)` waits for a new one,
@@ -176,6 +202,22 @@ To show the toast where Webex opens it, bottom right of the display, instead of 
 `"native": {"anchor": "bottom-right", ...}`, leave out the `place(toast...)` line, and stop with OWNER DECISION
 NEEDED if the toast or its answer button is outside 0..1920 by 0..1080 (tested on the Webex app, 2026-11-12: the
 toast opened inside the frame at bottom right and was answered there).
+
+On Windows (tested on the Webex app, 2026-11-12, with `"anchor": "bottom-right"` and a call placed from a mobile
+phone): the toast is a window of its own ("Webex Incoming call") and opened inside the frame at bottom right, but
+its answer and decline buttons are icons that UI Automation does not show, so `answerBtn()` finds nothing. Wait
+for the new window instead and answer with the shortcut:
+
+```js
+const before = await windows(); console.log('OWNER ACTION NEEDED: place the call now'); mark('owner_wait');
+const toast = await waitWindow(300, w => /incoming call/i.test(w.title), before); mark('ringing');
+await sleep(2500); await key('c', ['ctrl', 'shift']); mark('answered');
+```
+
+The call window's controls are readable (`End call`, `Mute` as `AXButton`), so the rest of the recipe runs as it
+is; the call connected in about 4 s. Two first-call tips are windows of their own: "Real-time closed captions"
+(`Got it`), and "Cisco AI Assistant is available" after the call window is placed. Dismiss both in a rehearsal
+call. Webex's own red dot in the call window means the org records calls, not the studio.
 
 What the test showed: the toast opens on the display where the pointer is, and `place` cannot move it to another
 display, so keep the pointer on the app window while waiting (hands off). If `a` is outside 0..1920 by 0..1080

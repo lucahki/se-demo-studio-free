@@ -1,7 +1,8 @@
 // Explore the job's native app window (job.json "native"), the app-window twin of capture/tab.js.
 // usage: node capture/app.js '<async JS body using app, shot(name), text(n), find(re, role), sleep(ms) and the
 //                             take helpers mv, click, clickText, type, key, wheel>'
-//        node capture/app.js --permissions   open the macOS requests for Screen Recording and Accessibility
+//        node capture/app.js --permissions   open the macOS requests for Screen Recording and Accessibility (Windows
+//                                            has no such permissions: --permissions and --status say so and exit 0)
 //        node capture/app.js --status        only show whether the two permissions are on (asks and opens nothing)
 //        node capture/app.js --list          running apps with windows (names only)
 //        node capture/app.js --revoke        clean-up at the end of the job: turn both permissions back to how they
@@ -20,6 +21,10 @@ const N = require('./native'); const fs = require('fs'); const path = require('p
   // logs/permissions.json (capture/native.js noteBefore): how the permissions were when this job first touched the app
   const REC = N.REC, terminal = N.TERMINAL;
   const save = rec => { try { fs.mkdirSync(path.dirname(REC), { recursive: true }); fs.writeFileSync(REC, JSON.stringify(rec, null, 1)); } catch (e) {} };
+  // Windows has no Screen Recording or Accessibility permission: the helper reports both on, so --revoke and --keep
+  // find nothing to change and scripts/pending-cleanup.sh never lists a Windows job
+  const WINNOTE = 'Windows: there is no permission to turn on or off for recording the app or moving the pointer.';
+  if (N.WIN && (a === '--status' || a === '--permissions')) { N.noteBefore(perms()); console.log(WINNOTE); process.exit(0); }
   if (a === '--status') { const p = perms(); N.noteBefore(p); console.log(`Screen Recording: ${p.screen ? 'on' : 'off'}   Accessibility: ${p.accessibility ? 'on' : 'off'}`); process.exit(p.screen && p.accessibility ? 0 : 4); }
   if (a === '--keep') {
     let rec = {}; try { rec = JSON.parse(fs.readFileSync(REC, 'utf8')); } catch (e) {}
@@ -66,12 +71,14 @@ const N = require('./native'); const fs = require('fs'); const path = require('p
   const log = { cursor: [], marks: [] }; const D = N.driver(h, log);
   const shot = async (n, dir) => { const f = path.join(dir || path.join(N.JOB, 'capture', 'explore'), 'app_' + n + '.png');
     const r = await h.call('shot', { path: f });
+    if (r.refused && /^covered by /.test(r.refused)) { console.log(`COVERED: screenshot "${n}" not taken, ${r.refused}; move or close that window, then rerun`); return null; }
     if (r.refused) { console.log(`LOGIN NEEDED: screenshot "${n}" not taken, ${win.app} looks like a sign-in screen (${r.refused})`); return null; }
     return f; };
   const fn = new Function('app', 'shot', 'text', 'find', 'sleep', 'mv', 'click', 'clickText', 'type', 'key', 'wheel', 'win', 'windows', 'place', `return (async()=>{ ${a} })()`);
   try { const r = await fn(D, shot, D.text, D.find, D.sleep, D.mv, D.click, D.clickText, D.type, D.key, D.wheel, win, D.windows, D.place);
     if (r !== undefined) console.log(typeof r === 'string' ? r : JSON.stringify(r, null, 1)); }
   catch (e) { console.log('ERR', e.message); }
-  console.log('WINDOW', `${win.app} ${win.w}x${win.h} points at ${win.scale}x (${win.px.join('x')} pixels)`);
+  console.log('WINDOW', N.WIN ? `${win.app} ${win.px.join('x')} pixels at ${Math.round(win.scale * 100)}% display scaling`   // Windows: x, y, w, h are pixels
+    : `${win.app} ${win.w}x${win.h} points at ${win.scale}x (${win.px.join('x')} pixels)`);
   await h.close(); process.exit(0);
 })().catch(e => { console.log('ERROR', e.message); process.exit(1); });

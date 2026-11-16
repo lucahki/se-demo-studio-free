@@ -106,8 +106,8 @@ Before the report, and also when a job stops early, make sure the job's Chrome i
 (`scripts/chrome.sh <slug> --stop`) and ask the person to delete `jobs/<slug>/.chrome-profile`, which holds their
 signed-in session. Remind them never to zip or share `jobs/`: it holds raw, unblurred footage.
 
-**Clean-up of the terminal's permissions** (a job that recorded a desktop app, job.json `"native"` with an app;
-also when such a job stops early). The job gave the terminal app Screen Recording and Accessibility; they belong
+**Clean-up of the terminal's permissions** (a job that recorded a desktop app on a Mac, job.json `"native"` with
+an app; also when such a job stops early. On Windows there are no such permissions: skip this). The job gave the terminal app Screen Recording and Accessibility; they belong
 to the terminal, not the job, so they stay on until someone turns them off. Turning them off is the default.
 Before the final report closes, tell the person in plain words what the two permissions let any program run from
 that terminal do (record the screen; move the mouse, type, and read other apps' windows), then ask:

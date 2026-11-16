@@ -1,24 +1,30 @@
-// Record and drive a native macOS app window (for example the Webex desktop app) next to the Chrome tab.
+// Record and drive a native app window (for example the Webex desktop app) next to the Chrome tab, on macOS and Windows.
 // Settings come from job.json "native": { "app": "Webex", "size": [1440, 810], "mode": "app", "anchor": "center" }
-//   app     the app's name or bundle id (Webex is "Cisco-Systems.Spark")
+//   app     the app's name or bundle id (Webex is "Cisco-Systems.Spark"); on Windows its name, program file name, or
+//           window title ("Webex" works on both)
 //   size    optional window size in points (16:9); by default the largest of 1920x1080, 1600x900, 1440x810,
 //           1280x720, 1120x630 that fits the display the window is on
 //   mode    "app" (default: all of the app's windows, cropped to the main window, so menus and pop-ups show) or
 //           "window" (only the main window)
 //   anchor  "center" (default) or "bottom-right": the window in the display's bottom-right corner, so Webex's
 //           incoming-call toast, which opens there, is inside the recorded area
-// The helper (capture/native/nativecap.swift) is compiled here on first use. Coordinates are frame pixels: the
-// app window mapped to 1920x1080, the same space as Chrome takes, the edit, the camera, and redaction.
+//   title   Windows only, optional: a pattern for the main window's title when the app has several large windows
+// The helper is compiled here on first use: capture/native/nativecap.swift on macOS (swiftc), nativecap.cs on Windows
+// (the C# compiler that ships with Windows). Both speak the same JSON lines. Coordinates are frame pixels: the app
+// window mapped to 1920x1080, the same space as Chrome takes, the edit, the camera, and redaction.
 // Unlike a Chrome tab, this moves the real pointer and types on the real keyboard: hands off the mouse and
 // keyboard while it runs. A click is refused if another app's window covers the point, and typing is refused
-// unless the app is in front. A scroll is refused like a click.
+// unless the app is in front. A scroll is refused like a click. On Windows the recording is the screen area under
+// the window, so check() also reports "covered" when another app's window is over it; the recorders stop on it.
 const { spawn, execFileSync } = require('child_process');
 const crypto = require('crypto'); const fs = require('fs'); const path = require('path'); const readline = require('readline');
 const JOB = path.resolve(__dirname, '..');
 const CFG = JSON.parse(fs.readFileSync(path.join(JOB, 'job.json'), 'utf8'));
 const NAT = CFG.native || {};
-const SRC = path.join(__dirname, 'native', 'nativecap.swift');
-const BIN = path.join(__dirname, 'native', '.build', 'nativecap');
+const WIN = process.platform === 'win32';
+const SRC = path.join(__dirname, 'native', WIN ? 'nativecap.cs' : 'nativecap.swift');
+const TLB = path.join(__dirname, 'native', 'tlbconv.cs');   // Windows: UI Automation interop, built before the helper
+const BIN = path.join(__dirname, 'native', '.build', WIN ? 'nativecap.exe' : 'nativecap');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // The two permissions belong to the terminal app, not to this job. logs/permissions.json keeps how they were the
@@ -35,15 +41,37 @@ function noteBefore(perm) {
   catch (e) { console.log('note: could not write logs/permissions.json (' + e.message + '); the clean-up will treat both permissions as off before this job'); }
 }
 
+// Windows: the .NET Framework 4 C# compiler, part of Windows 10 and 11
+function csc() {
+  const net = path.join(process.env.WINDIR || process.env.SystemRoot || 'C:\\Windows', 'Microsoft.NET');
+  const c = ['Framework64', 'Framework'].map(d => path.join(net, d, 'v4.0.30319', 'csc.exe')).find(f => fs.existsSync(f));
+  if (!c) throw new Error('Native app capture on Windows needs the .NET Framework 4 C# compiler (csc.exe), which comes with Windows 10 and 11; ' +
+    'it is missing under ' + net + '. Turn on ".NET Framework 4.8 Advanced Services" in Windows Features (Control Panel), then rerun.');
+  return c;
+}
+function buildWindows(dir) {
+  const c = csc(), quiet = { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] };
+  const run = (exe, args, what) => { try { execFileSync(exe, args, quiet); }
+    catch (e) { throw new Error(`Could not ${what}: ${((e.stdout || '') + (e.stderr || '')).toString().trim().split('\n').slice(0, 8).join('\n') || e.message}`); } };
+  run(c, ['-nologo', '-optimize', '-out:tlbconv.exe', TLB], 'build capture/native/tlbconv.cs');
+  const uia = path.join(process.env.WINDIR || 'C:\\Windows', 'System32', 'UIAutomationCore.dll');
+  run(path.join(dir, 'tlbconv.exe'), [uia, 'Interop.UIAutomationClient.dll'], 'read the UI Automation type library from ' + uia);
+  run(c, ['-nologo', '-optimize', '-out:' + path.basename(BIN), '-r:System.Web.Extensions.dll', '-r:System.Drawing.dll',
+    '-link:Interop.UIAutomationClient.dll', SRC], 'build capture/native/nativecap.cs');
+}
+
 function build() {
-  if (process.platform !== 'darwin') throw new Error('Native app capture runs on macOS only (it uses ScreenCaptureKit).');
-  const hash = crypto.createHash('sha256').update(fs.readFileSync(SRC)).digest('hex');
+  if (process.platform !== 'darwin' && !WIN) throw new Error('Native app capture runs on macOS and Windows only.');
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(SRC)).update(WIN ? fs.readFileSync(TLB) : '').digest('hex');
   const stamp = BIN + '.sha256';
   if (fs.existsSync(BIN) && fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8') === hash) return BIN;
   fs.mkdirSync(path.dirname(BIN), { recursive: true });
-  console.log('Building the native capture helper (once per job, about 30 seconds)...');
-  try { execFileSync('swiftc', ['-O', '-swift-version', '5', '-o', BIN, SRC], { stdio: ['ignore', 'ignore', 'inherit'] }); }
-  catch (e) { throw new Error('Could not build capture/native/nativecap.swift. If swiftc is missing, install the Command Line Tools: xcode-select --install'); }
+  console.log(`Building the native capture helper (once per job, about ${WIN ? 10 : 30} seconds)...`);
+  if (WIN) buildWindows(path.dirname(BIN));
+  else {
+    try { execFileSync('swiftc', ['-O', '-swift-version', '5', '-o', BIN, SRC], { stdio: ['ignore', 'ignore', 'inherit'] }); }
+    catch (e) { throw new Error('Could not build capture/native/nativecap.swift. If swiftc is missing, install the Command Line Tools: xcode-select --install'); }
+  }
   fs.writeFileSync(stamp, hash); return BIN;
 }
 
@@ -51,7 +79,8 @@ function build() {
 async function open(opts = {}) {
   const app = opts.app || NAT.app;
   if (!app) throw new Error('No app set: add "native": {"app": "Webex"} to job.json');
-  const p = spawn(build(), ['serve', '--app', app, '--mode', opts.mode || NAT.mode || 'app'], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const title = opts.title || NAT.title;   // Windows only; the macOS helper ignores it
+  const p = spawn(build(), ['serve', '--app', app, '--mode', opts.mode || NAT.mode || 'app', ...(title ? ['--title', title] : [])], { stdio: ['pipe', 'pipe', 'inherit'] });
   const waiting = new Map(); let next = 1; let dead = null;
   readline.createInterface({ input: p.stdout }).on('line', l => {
     let m; try { m = JSON.parse(l); } catch (e) { return; }
@@ -134,7 +163,8 @@ function driver(h, log) {
   return { mv, click, dblclick, rightClick, clickText, find, type, key, wheel, mark, text, waitText, windows, waitWindow, place, sleep, home, cur: () => cur };
 }
 
-// For takes: why the app looks like a sign-in screen ('' if not), whether the window moved, and whether it is in front.
-async function check(h) { const g = await h.call('guard'); return { signin: g.reason, moved: g.moved, front: g.front }; }
+// For takes: why the app looks like a sign-in screen ('' if not), whether the window moved, whether it is in front,
+// and (Windows) which other app's window is over the recorded area ('' if none): it would be recorded.
+async function check(h) { const g = await h.call('guard'); return { signin: g.reason, moved: g.moved, front: g.front, covered: g.covered || '' }; }
 
-module.exports = { open, ready, driver, check, build, noteBefore, REC, TERMINAL, CFG, NAT, JOB, sleep };
+module.exports = { open, ready, driver, check, build, noteBefore, REC, TERMINAL, CFG, NAT, JOB, WIN, sleep };

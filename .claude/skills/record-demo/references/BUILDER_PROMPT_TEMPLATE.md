@@ -179,7 +179,7 @@ close, and transitions, and none of it may imitate a product screen.
   - `lib/cursor_tracks.py` ends with a jump check. Before ROUGH CUT READY and again before FINAL READY, fix every
     `CURSOR JUMP` it prints, fade or park every `CURSOR CUT`, and look at rendered stills either side of each
     listed time. Say in the README that the check ran and what it found.
-- A desktop app window (job.json `"native"`, macOS only) is recorded with `capture/rec_app.js`, or with
+- A desktop app window (job.json `"native"`, macOS or Windows) is recorded with `capture/rec_app.js`, or with
   `rec.js --app` when the same moment must show on both screens; explore it with `capture/app.js`. Read
   references/PIPELINE.md "Native app windows" before the first app take: it drives the real pointer and keyboard
   (tell the owner before every run that clicks or types, and ask for hands off), there are no page loads (put the
